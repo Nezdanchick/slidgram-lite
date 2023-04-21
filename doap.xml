@@ -1,0 +1,127 @@
+<?xml version="1.0"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+    <Project xmlns="http://usefulinc.com/ns/doap#" xmlns:foaf="http://xmlns.com/foaf/0.1/"
+        xmlns:xmpp="https://linkmauve.fr/ns/xmpp-doap#">
+        <name>slidgram</name>
+
+        <created>CHANGEME</created>
+
+        <shortdesc xml:lang="en">A feature-rich Telegram/XMPP gateway</shortdesc>
+
+        <homepage rdf:resource="https://sr.ht/~nicoco/slidgram" />
+        <download-page rdf:resource="https://git.sr.ht/~nicoco/slidgram/refs" />
+        <bug-database rdf:resource="https://todo.sr.ht/~nicoco/slidge" />
+        <developer-forum rdf:resource="xmpp:slidge@conference.nicoco.fr?join" />
+        <support-forum rdf:resource="xmpp:slidge@conference.nicoco.fr?join" />
+
+        <license
+            rdf:resource="https://sr.ht/~nicoco/slidgram/tree/master/item/LICENSE" />
+
+        <language>en</language>
+
+        <programming-language>Python</programming-language>
+
+        <os>Linux</os>
+
+        <category rdf:resource="https://linkmauve.fr/ns/xmpp-doap#category-component" />
+
+        <maintainer>
+            <foaf:Person>
+                <foaf:name>nicoco</foaf:name>
+                <foaf:homepage rdf:resource="https://nicoco.fr" />
+            </foaf:Person>
+        </maintainer>
+
+        <repository>
+            <GitRepository>
+                <browse rdf:resource="https://git.sr.ht/~nicoco/slidgram" />
+                <location rdf:resource="https://git.sr.ht/~nicoco/slidgram.git" />
+            </GitRepository>
+        </repository>
+
+        <implements rdf:resource="https://xmpp.org/rfcs/rfc6120.html" />
+        <implements rdf:resource="https://xmpp.org/rfcs/rfc6121.html" />
+        <implements rdf:resource="https://xmpp.org/rfcs/rfc6122.html" />
+        <implements rdf:resource="https://xmpp.org/rfcs/rfc7590.html" />
+
+        <implements>
+            <xmpp:SupportedXep>
+                <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0045.html" />
+                <xmpp:status>partial</xmpp:status>
+                 <xmpp:note>Participating in groups work, but creation/deletion/moderation is not yet possible from slidge.</xmpp:note>
+            </xmpp:SupportedXep>
+        </implements>
+        <implements>
+            <xmpp:SupportedXep>
+                <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0085.html" />
+                <xmpp:status>complete</xmpp:status>
+                 <xmpp:note>All chat states have a telegram equivalent, including active/inactive</xmpp:note>
+            </xmpp:SupportedXep>
+        </implements>
+        <implements>
+            <xmpp:SupportedXep>
+                <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0184.html" />
+                <xmpp:status>complete</xmpp:status>
+                 <xmpp:note>No real recipient-generated delivery receipts in Telegram, but slidge will emit some when Telegram servers acknowledge a message</xmpp:note>
+            </xmpp:SupportedXep>
+        </implements>
+        <implements>
+            <xmpp:SupportedXep>
+                <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0256.html" />
+                <xmpp:status>complete</xmpp:status>
+
+            </xmpp:SupportedXep>
+        </implements>
+        <implements>
+            <xmpp:SupportedXep>
+                <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0308.html" />
+                <xmpp:status>complete</xmpp:status>
+
+            </xmpp:SupportedXep>
+        </implements>
+        <implements>
+            <xmpp:SupportedXep>
+                <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0333.html" />
+                <xmpp:status>complete</xmpp:status>
+                 <xmpp:note>Only displayed markers have an equivalence in Telegram. They are also used to sync read state from and to Telegram clients.</xmpp:note>
+            </xmpp:SupportedXep>
+        </implements>
+        <implements>
+            <xmpp:SupportedXep>
+                <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0363.html" />
+                <xmpp:status>complete</xmpp:status>
+
+            </xmpp:SupportedXep>
+        </implements>
+        <implements>
+            <xmpp:SupportedXep>
+                <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0424.html" />
+                <xmpp:status>complete</xmpp:status>
+
+            </xmpp:SupportedXep>
+        </implements>
+        <implements>
+            <xmpp:SupportedXep>
+                <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0444.html" />
+                <xmpp:status>complete</xmpp:status>
+
+            </xmpp:SupportedXep>
+        </implements>
+        <implements>
+            <xmpp:SupportedXep>
+                <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0461.html" />
+                <xmpp:status>complete</xmpp:status>
+
+            </xmpp:SupportedXep>
+        </implements>
+        <implements>
+            <xmpp:SupportedXep>
+                <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0425.html" />
+                <xmpp:status>partial</xmpp:status>
+                 <xmpp:note>You cannot moderate messages from slidge yet, but deleted messages in groups will appear moderated on the XMPP side.</xmpp:note>
+            </xmpp:SupportedXep>
+        </implements>
+
+
+    </Project>
+</rdf:RDF>

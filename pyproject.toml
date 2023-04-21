@@ -1,0 +1,68 @@
+[tool.poetry]
+name = "slidgram"
+version = "0.0.0-dev0"
+description = ""
+authors = ["nicoco <nicoco@nicoco.fr>"]
+readme = "README.md"
+
+[[tool.poetry.source]]
+name = "slidge-repo"
+url = "https://slidge.im/repo"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+aiotdlib = "^0.19.2+slidge1"
+
+[tool.poetry.dependencies.slidge]
+git = "https://git.sr.ht/~nicoco/slidge"
+branch = "split"
+
+[tool.poetry.group.dev.dependencies]
+pytest-asyncio = "^0.21.0"
+black = "^23.3.0"
+isort = "^5.12.0"
+ruff = "^0.0.263"
+mypy = "^1.2.0"
+xmldiff = "^2.6.1"
+pre-commit = "^3.2.2"
+sphinx = "^6.2.1"
+furo = "^2023.3.27"
+sphinx-autoapi = "^2.1.0"
+sphinx-argparse = "^0.4.0"
+sphinx-mdinclude = "^0.5.3"
+[tool.poetry.group.dev.dependencies.slidge-dev-helpers]
+git = "https://git.sr.ht/~nicoco/slidge-dev-helpers"
+branch = "master"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+slidgram = "slidgram.__main__:main"
+
+[tool.mypy]
+files = ["slidgram"]
+exclude = [
+    "tests",
+]
+check_untyped_defs = true
+strict = false
+
+[[tool.mypy.overrides]]
+module = [
+    "aiotdlib.*",
+]
+ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 120
+exclude = [
+    "tests",
+]
+
+[tool.isort]
+profile = "black"
+skip = [
+    "tests",
+]

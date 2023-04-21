@@ -1,0 +1,54 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: 5ac5e6f
+_src_path: git+https://git.sr.ht/~nicoco/slidge-template
+author: nicoco
+author_email: nicoco@nicoco.fr
+author_website: https://nicoco.fr
+dockerhub_username: nicocool84
+legacy_lib: aiotdlib
+legacy_lib_website: https://github.com/pylakey/aiotdlib
+legacy_service: Telegram
+legacy_service_website: https://telegram.org
+module_name: slidgram
+project_name: slidgram
+python_version: '3.9'
+srht_secret_c3p0: dc710d9d-8043-4e1d-9837-b35bfa02800a
+srht_secret_docker: 173244e1-c233-43de-969f-65965c5487e1
+srht_secret_pypi: 3ecea679-dec7-4ac0-8821-75d0f4fe0773
+srht_username: nicoco
+xeps:
+-   note: Participating in groups work, but creation/deletion/moderation is not yet
+        possible from slidge.
+    number: 45
+    status: partial
+-   note: All chat states have a telegram equivalent, including active/inactive
+    number: 85
+    status: complete
+-   note: No real recipient-generated delivery receipts in Telegram, but slidge will
+        emit some when Telegram servers acknowledge a message
+    number: 184
+    status: complete
+-   number: 256
+    status: complete
+-   number: 308
+    status: complete
+-   note: Only displayed markers have an equivalence in Telegram. They are also used
+        to sync read state from and to Telegram clients.
+    number: 333
+    status: complete
+-   note: null
+    number: 363
+    status: complete
+-   note: null
+    number: 424
+    status: complete
+-   note: null
+    number: 444
+    status: complete
+-   note: null
+    number: 461
+    status: complete
+-   note: You cannot moderate messages from slidge yet, but deleted messages in groups
+        will appear moderated on the XMPP side.
+    number: 425
+    status: partial
