@@ -180,6 +180,20 @@ class TelegramToXMPPMixin(ContentMessageMixin):
             )
             self.session.log.warning("Ignoring content: %s", type(content))
 
+        if not isinstance(msg.reply_markup, tgapi.ReplyMarkupShowKeyboard):
+            return
+
+        commands = ["Suggested replies:"]
+        for row_list in msg.reply_markup.rows:
+            line = []
+            for row in row_list:
+                line.append(
+                    f"{row.text} "
+                    f"({row.type_.__class__.__name__.removeprefix('KeyboardButtonType')})"
+                )
+            commands.append(" --- ".join(line))
+        self.send_text("\n".join(commands))
+
     async def send_tg_file(
         self,
         best_file: tgapi.File,
