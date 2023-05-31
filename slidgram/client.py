@@ -256,7 +256,7 @@ class TelegramClient(BaseClient):
             user: tgapi.User = await contact.get_telegram_user()
             if not isinstance(user.type_, tgapi.UserTypeRegular):
                 return
-            if not user.is_contact:
+            if not user.is_contact and action.chat.last_message:
                 contact.send_friend_request(
                     "We have a direct chat, do you want to add me as a Telegram contact?"
                 )
