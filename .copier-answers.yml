@@ -28,12 +28,13 @@ xeps:
         emit some when Telegram servers acknowledge a message
     number: 184
     status: complete
--   number: 256
+-   number: 319
     status: complete
 -   number: 308
     status: complete
 -   note: Only displayed markers have an equivalence in Telegram. They are also used
-        to sync read state from and to Telegram clients.
+        to sync read state from and to Telegram clients. In groups, you only receive displayed
+        markers for message you have sent, not for messages from other participants.
     number: 333
     status: complete
 -   note: null
