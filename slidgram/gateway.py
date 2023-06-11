@@ -50,7 +50,7 @@ class SessionCommandMixin:
                     ],
                 )
             ],
-            handler=self.step2,
+            handler=self.step2,  # type:ignore
             handler_args=[tg_sessions],
         )
 
@@ -114,7 +114,7 @@ class TerminateSession(SessionCommandMixin, Command):
                 f"(last active on {fmt_timestamp(tg_session.last_active_date)})"
             ),
             success="The session has been terminated",
-            handler=self.finish,
+            handler=self.finish,  # type:ignore
             handler_args=[i],
         )
 
