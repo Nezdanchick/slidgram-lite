@@ -1,5 +1,6 @@
 import asyncio
 import functools
+from pathlib import Path
 from typing import TYPE_CHECKING, Optional, Union
 
 import aiotdlib
@@ -390,3 +391,19 @@ class TelegramClient(BaseClient):
     async def is_private_chat(self, chat_id: int):
         chat = await self.get_chat(chat_id)
         return isinstance(chat.type_, tgapi.ChatTypePrivate)
+
+    async def get_local_path(self, file: tgapi.File) -> Optional[Path]:
+        if not file.local.path:
+            try:
+                file = await self.session.tg.api.download_file(
+                    file_id=file.id,
+                    synchronous=True,
+                    priority=1,
+                    offset=0,
+                    limit=0,
+                )
+            except Exception as e:
+                self.log.error("Could not download %s", file, exc_info=e)
+                return None
+
+        return Path(file.local.path)
