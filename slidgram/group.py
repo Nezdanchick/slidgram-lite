@@ -61,6 +61,12 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
     session: "Session"
     # all group chats in telegram correspond are closer to modern XMPP 'groups' than 'channels'
     type = MucType.GROUP
+    _VALID_MEMBER_STATUSES = (
+        tgapi.ChatMemberStatusMember,
+        tgapi.ChatMemberStatusAdministrator,
+        tgapi.ChatMemberStatusCreator,
+        tgapi.ChatMemberStatusRestricted,
+    )
 
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
@@ -82,6 +88,12 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
             info = await tg.get_supergroup_full_info(group.id)
         else:
             raise XMPPError("bad-request", f"This is not a telegram group: {chat}")
+        if not isinstance(group.status, self._VALID_MEMBER_STATUSES):
+            raise XMPPError(
+                "not-authorized",
+                f"You don't belong to this group, your status is {group.status}. "
+                f"Use an official telegram client to change that.",
+            )
         if photo := info.photo:
             best = min(photo.sizes, key=lambda x: x.width).photo
             self.avatar = await tg.get_local_path(best)

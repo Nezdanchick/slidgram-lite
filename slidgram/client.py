@@ -259,11 +259,15 @@ class TelegramClient(aiotdlib.Client):
                 contact.send_friend_request(
                     "We have a direct chat, do you want to add me as a Telegram contact?"
                 )
-        elif isinstance(action.chat.type_, tgapi.ChatTypeBasicGroup):
-            g = await self.session.bookmarks.by_legacy_id(action.chat.id)
-            await g.add_to_bookmarks(auto_join=True)
-        elif isinstance(action.chat.type_, tgapi.ChatTypeSupergroup):
-            await self.session.bookmarks.by_legacy_id(action.chat.id)
+            return
+        try:
+            if isinstance(action.chat.type_, tgapi.ChatTypeBasicGroup):
+                g = await self.session.bookmarks.by_legacy_id(action.chat.id)
+                await g.add_to_bookmarks(auto_join=True)
+            elif isinstance(action.chat.type_, tgapi.ChatTypeSupergroup):
+                await self.session.bookmarks.by_legacy_id(action.chat.id)
+        except XMPPError as e:
+            self.log.debug("Could not add group", exc_info=e)
 
     async def handle_MessageInteractionInfo(
         self, update: tgapi.UpdateMessageInteractionInfo
