@@ -86,7 +86,10 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
             best = min(photo.sizes, key=lambda x: x.width).photo
             self.avatar = await tg.get_local_path(best)
         self.n_participants = group.member_count
-        self.name = self.description = chat.title
+        name = chat.title
+        if getattr(chat.type_, "is_channel", False):
+            name += " (channel)"
+        self.name = self.description = name
 
     async def update_subject_from_msg(self, msg: Optional[tgapi.Message] = None):
         if msg is None:
