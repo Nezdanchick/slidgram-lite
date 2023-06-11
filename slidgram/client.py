@@ -58,14 +58,7 @@ class NotFound(tgapi.NotFound, XMPPError):
         XMPPError.__init__(self, "item-not-found", self.message)
 
 
-class BaseClient(aiotdlib.Client):
-    async def get_main_list_chats(self, limit=0):
-        # do not prefetch any chats, unlike aiotdlib's default behaviour
-        r = await self.cache.get_main_list_chats(limit)
-        return r
-
-
-class CredentialsValidation(BaseClient):
+class CredentialsValidation(aiotdlib.Client):
     def __init__(self, registration_form: dict):
         super().__init__(**get_base_kwargs(registration_form))
         self.code_future: asyncio.Future[
@@ -79,8 +72,13 @@ class CredentialsValidation(BaseClient):
     async def _auth_get_password(self):
         return self.password
 
+    async def get_main_list_chats(self, limit=0):
+        # do not prefetch any chats, unlike aiotdlib's default behaviour
+        r = await self.cache.get_main_list_chats(limit)
+        return r
 
-class TelegramClient(BaseClient):
+
+class TelegramClient(aiotdlib.Client):
     def __init__(self, session: "Session"):
         super().__init__(
             parse_mode=aiotdlib.ClientParseMode.MARKDOWN,
