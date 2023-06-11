@@ -14,7 +14,7 @@ tasks:
       poetry run c3p0 slidgram
       poetry run set_version
       poetry build
-      tar cvf dist/* ~/package.tar
+      tar cvf ~/package.tar dist/*
   - tests: |
       cd slidgram
       poetry run ruff .
