@@ -1,5 +1,5 @@
 # Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
-_commit: 5ac5e6f
+_commit: d1c0b9f
 _src_path: git+https://git.sr.ht/~nicoco/slidge-template
 author: nicoco
 author_email: nicoco@nicoco.fr
@@ -33,8 +33,8 @@ xeps:
 -   number: 308
     status: complete
 -   note: Only displayed markers have an equivalence in Telegram. They are also used
-        to sync read state from and to Telegram clients. In groups, you only receive displayed
-        markers for message you have sent, not for messages from other participants.
+        to sync read state from and to Telegram clients. In groups, you only receive
+        displayed markers for message you have sent, not for messages from other participants.
     number: 333
     status: complete
 -   note: null

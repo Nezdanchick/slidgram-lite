@@ -6,8 +6,7 @@ secrets:
   - dc710d9d-8043-4e1d-9837-b35bfa02800a
 artifacts:
   - ./docs.tar.gz
-  - ./package.tar.gz
-  - ./package.whl
+  - ./package.tar
 tasks:
   - install: |
       cd slidgram
@@ -15,8 +14,7 @@ tasks:
       poetry run c3p0 slidgram
       poetry run set_version
       poetry build
-      cp dist/*.tar.gz ~/package.tar.gz
-      cp dist/*.whl ~/package.whl
+      tar cvf dist/* ~/package.tar
   - tests: |
       cd slidgram
       poetry run ruff .
