@@ -395,7 +395,7 @@ class TelegramClient(aiotdlib.Client):
         return isinstance(chat.type_, tgapi.ChatTypePrivate)
 
     async def get_local_path(self, file: tgapi.File) -> Optional[Path]:
-        if not file.local.path:
+        if not file.local.path or not Path(file.local.path).exists():
             try:
                 file = await self.session.tg.api.download_file(
                     file_id=file.id,
