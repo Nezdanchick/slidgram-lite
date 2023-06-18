@@ -9,7 +9,7 @@ RUN python3 -m pip install --requirement requirements.txt
 FROM docker.io/nicocool84/slidge-base AS slidgram
 
 USER root
-RUN apt-get update && apt-get install libc++1 -y
+RUN apt-get update && apt-get install libc++1 libssl3 -y
 
 USER slidge
 COPY --from=builder /venv /venv
@@ -19,6 +19,6 @@ COPY ./slidgram /venv/lib/python/site-packages/legacy_module
 FROM docker.io/nicocool84/slidge-dev AS dev
 
 USER root
-RUN apt-get update && apt-get install libc++1 -y
+RUN apt-get update && apt-get install libc++1 libssl3 -y
 
 COPY --from=builder /venv /venv
