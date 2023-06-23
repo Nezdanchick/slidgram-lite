@@ -1,5 +1,11 @@
 # slidgram
 
+[Home](https://sr.ht/~nicoco/slidge) |
+[Docs](https://slidge.im/slidgram) |
+[Issues](https://sr.ht/~nicoco/slidge/slidgram) |
+[Patches](https://lists.sr.ht/~nicoco/public-inbox) |
+[Chat](xmpp:slidge@conference.nicoco.fr?join)
+
 A
 [feature-rich](https://slidge.im/slidgram/features.html)
 [Telegram](https://telegram.org) to
