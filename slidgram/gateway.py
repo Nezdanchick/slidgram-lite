@@ -126,7 +126,15 @@ class TerminateSession(SessionCommandMixin, Command):
 
 class Gateway(BaseGateway):
     REGISTRATION_INSTRUCTIONS = REGISTRATION_INSTRUCTIONS
-    REGISTRATION_FIELDS = [FormField(var="phone", label="Phone number", required=True)]
+    REGISTRATION_FIELDS = [
+        FormField(var="phone", label="Phone number", required=True),
+        FormField(
+            var="password",
+            label="Password (only required if you set up one in Telegram)",
+            required=False,
+            private=True,
+        ),
+    ]
     REGISTRATION_TYPE = RegistrationType.TWO_FACTOR_CODE
     ROSTER_GROUP = "Telegram"
     COMPONENT_NAME = "Telegram (slidge)"
@@ -135,12 +143,6 @@ class Gateway(BaseGateway):
 
     SEARCH_FIELDS = [
         FormField(var="phone", label="Phone number", required=True),
-        FormField(
-            var="password",
-            label="Password (only required if you set up one in Telegram)",
-            required=False,
-            private=True,
-        ),
     ]
 
     GROUPS = True
