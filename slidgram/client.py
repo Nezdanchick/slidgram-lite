@@ -107,6 +107,12 @@ class TelegramClient(aiotdlib.Client):
 
         self.add_event_handler(self.dispatch_update, tgapi.API.Types.ANY)
 
+    async def get_main_list_chats(self, limit=10):
+        # only fetch 10 chats instead of aiotdlib's default of 100,
+        # because it seems to take a while for some users
+        r = await self.cache.get_main_list_chats(limit)
+        return r
+
     async def request(  # type:ignore
         self,
         query: BaseObject,
