@@ -26,6 +26,7 @@ class Contact(TelegramToXMPPMixin, AvailableEmojisMixin, LegacyContact[int]):
         super().__init__(*a, **k)
         self.chat_id = self.legacy_id
         self._online_expire_task = self.xmpp.loop.create_task(noop())
+        self.__avatar_fetch_task = None
 
     async def get_telegram_user(self):
         return await self.session.tg.get_user(self.legacy_id)
@@ -66,6 +67,11 @@ class Contact(TelegramToXMPPMixin, AvailableEmojisMixin, LegacyContact[int]):
                 last_seen=datetime.now(),
             )
 
+    async def __fetch_avatar(self, user: tgapi.User):
+        if photo := user.profile_photo:
+            if path := await self.session.tg.get_local_path(photo.small):
+                await self.set_avatar(path, photo.id)
+
     async def update_info(self, user: Optional[tgapi.User] = None):
         if user is None:
             user = await self.get_telegram_user()
@@ -77,9 +83,7 @@ class Contact(TelegramToXMPPMixin, AvailableEmojisMixin, LegacyContact[int]):
                 name += " " + last
         self.name = name
 
-        if photo := user.profile_photo:
-            if path := await self.session.tg.get_local_path(photo.small):
-                await self.set_avatar(path, photo.id)
+        self.__avatar_fetch_task = self.xmpp.loop.create_task(self.__fetch_avatar(user))
 
         if isinstance(user.type_, tgapi.UserTypeBot) or user.id == 777000:
             # 777000 is not marked as bot, it's the "Telegram" contact, which gives

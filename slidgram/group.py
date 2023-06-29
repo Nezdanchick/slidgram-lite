@@ -74,6 +74,10 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
         #                                     tuple[participant, emoji]
         self.reactions = defaultdict[int, set[tuple[Participant, str]]](set)
         self.session.xmpp.loop.create_task(self.update_subject_from_msg())
+        self.__avatar_fetch_task = None
+
+    async def __fetch_avatar(self, best: tgapi.File):
+        self.avatar = await self.session.tg.get_local_path(best)
 
     async def update_info(self):
         tg = self.session.tg
@@ -96,7 +100,9 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
             )
         if photo := info.photo:
             best = min(photo.sizes, key=lambda x: x.width).photo
-            self.avatar = await tg.get_local_path(best)
+            self.__avatar_fetch_task = self.xmpp.loop.create_task(
+                self.__fetch_avatar(best)
+            )
         self.n_participants = group.member_count
         name = chat.title
         if getattr(chat.type_, "is_channel", False):
