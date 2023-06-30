@@ -167,6 +167,9 @@ class Gateway(BaseGateway):
                 ]
             )
         log.debug("CONFIG %s", vars(config))
+        self.download_semaphore: asyncio.Semaphore = asyncio.Semaphore(
+            config.MAX_PARALLEL_DOWNLOADS
+        )
 
     async def validate(
         self, user_jid: JID, registration_form: dict[str, typing.Optional[str]]

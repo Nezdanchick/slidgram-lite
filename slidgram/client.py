@@ -408,13 +408,14 @@ class TelegramClient(aiotdlib.Client):
         await self.ready.wait()
         if not file.local.path or not Path(file.local.path).exists():
             try:
-                file = await self.session.tg.api.download_file(
-                    file_id=file.id,
-                    synchronous=True,
-                    priority=1,
-                    offset=0,
-                    limit=0,
-                )
+                async with self.session.xmpp.download_semaphore:
+                    file = await self.session.tg.api.download_file(
+                        file_id=file.id,
+                        synchronous=True,
+                        priority=1,
+                        offset=0,
+                        limit=0,
+                    )
             except Exception as e:
                 self.log.error("Could not download %s", file, exc_info=e)
                 return None

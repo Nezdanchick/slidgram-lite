@@ -42,3 +42,8 @@ ATTACHMENT_MAX_SIZE: int = 10 * 1024**2
 ATTACHMENT_MAX_SIZE__DOC = (
     "Maximum file size (in bytes) to download from telegram automatically/"
 )
+
+MAX_PARALLEL_DOWNLOADS: int = 3
+MAX_PARALLEL_DOWNLOADS__DOC = (
+    "Maximum number of parallel telegram downloads " "across all sessions."
+)

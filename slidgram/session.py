@@ -14,6 +14,7 @@ from slixmpp.exceptions import XMPPError
 from . import config
 from .client import TelegramClient
 from .contact import Contact
+from .gateway import Gateway
 from .group import MUC
 
 
@@ -40,6 +41,8 @@ Recipient = Union[Contact, MUC]
 
 
 class Session(BaseSession[int, Recipient]):
+    xmpp: Gateway
+
     def __init__(self, user):
         super().__init__(user)
         self.sent_read_marks = set[int]()
