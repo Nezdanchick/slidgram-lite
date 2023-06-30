@@ -55,6 +55,7 @@ class Session(BaseSession[int, Recipient]):
 
     async def login(self):
         await self.tg.start()
+        self.tg.ready.set()
         my_id = await self.tg.get_my_id()
         self.contacts.user_legacy_id = my_id
         me = await self.tg.get_user(my_id)
@@ -64,6 +65,7 @@ class Session(BaseSession[int, Recipient]):
 
     async def logout(self):
         await self.tg.stop()
+        self.tg.ready.clear()
 
     async def wait_for_tdlib_success(self, result_id: int):
         fut = self.xmpp.loop.create_future()

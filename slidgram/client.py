@@ -106,6 +106,7 @@ class TelegramClient(aiotdlib.Client):
         )
 
         self.add_event_handler(self.dispatch_update, tgapi.API.Types.ANY)
+        self.ready = asyncio.Event()
 
     async def get_main_list_chats(self, limit=10):
         # only fetch 10 chats instead of aiotdlib's default of 100,
@@ -401,6 +402,10 @@ class TelegramClient(aiotdlib.Client):
         return isinstance(chat.type_, tgapi.ChatTypePrivate)
 
     async def get_local_path(self, file: tgapi.File) -> Optional[Path]:
+        # we want to limit calls as much as possible during login,
+        # because aiotdlib will just raise an Exception if it takes too
+        # long
+        await self.ready.wait()
         if not file.local.path or not Path(file.local.path).exists():
             try:
                 file = await self.session.tg.api.download_file(
