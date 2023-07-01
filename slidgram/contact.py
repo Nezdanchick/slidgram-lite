@@ -75,12 +75,10 @@ class Contact(TelegramToXMPPMixin, AvailableEmojisMixin, LegacyContact[int]):
     async def update_info(self, user: Optional[tgapi.User] = None):
         if user is None:
             user = await self.get_telegram_user()
-        if username := user.username:
-            name = username
-        else:
-            name = user.first_name
-            if last := user.last_name:
-                name += " " + last
+
+        name = user.first_name
+        if last := user.last_name:
+            name += " " + last
         self.name = name
 
         self.__avatar_fetch_task = self.xmpp.loop.create_task(self.__fetch_avatar(user))

@@ -75,7 +75,7 @@ class CredentialsValidation(aiotdlib.Client):
 
     async def get_main_list_chats(self, limit=0):
         # do not prefetch any chats, unlike aiotdlib's default behaviour
-        r = await self.cache.get_main_list_chats(limit)
+        r = await self.cache.get_main_chat_list(limit)
         return r
 
 
@@ -112,7 +112,7 @@ class TelegramClient(aiotdlib.Client):
     async def get_main_list_chats(self, limit=10):
         # only fetch 10 chats instead of aiotdlib's default of 100,
         # because it seems to take a while for some users
-        r = await self.cache.get_main_list_chats(limit)
+        r = await self.cache.get_main_chat_list(limit)
         return r
 
     async def request(  # type:ignore
@@ -297,6 +297,8 @@ class TelegramClient(aiotdlib.Client):
         contact_reactions = list[str]()
         # these sanity checks might not be necessary, but in doubt…
         for reaction in update.interaction_info.reactions:
+            if not isinstance(reaction.type_, tgapi.ReactionTypeEmoji):
+                continue
             if reaction.total_count == 1:
                 if len(reaction.recent_sender_ids) != 1:
                     self.log.warning(
@@ -307,17 +309,17 @@ class TelegramClient(aiotdlib.Client):
                 sender = reaction.recent_sender_ids[0]
                 if isinstance(sender, tgapi.MessageSenderUser):
                     if sender.user_id == me:
-                        user_reactions.append(reaction.reaction)
+                        user_reactions.append(reaction.type_.emoji)
                     elif sender.user_id == contact.legacy_id:
-                        contact_reactions.append(reaction.reaction)
+                        contact_reactions.append(reaction.type_.emoji)
                 else:
                     self.log.warning(
                         "Weird reactions (neither me nor them): %s",
                         update.interaction_info.reactions,
                     )
             elif reaction.total_count == 2:
-                user_reactions.append(reaction.reaction)
-                contact_reactions.append(reaction.reaction)
+                user_reactions.append(reaction.type_.emoji)
+                contact_reactions.append(reaction.type_.emoji)
             else:
                 self.log.warning(
                     "Weird reactions (empty): %s", update.interaction_info.reactions
@@ -339,7 +341,9 @@ class TelegramClient(aiotdlib.Client):
         old_reacters = muc.reactions[update.message_id]
         new_reacters = set()
         for reaction in update.interaction_info.reactions:
-            emoji = reaction.reaction
+            if not isinstance(reaction.type_, tgapi.ReactionTypeEmoji):
+                continue
+            emoji = reaction.type_.emoji
 
             for sender_id in reaction.recent_sender_ids:
                 if isinstance(sender_id, tgapi.MessageSenderUser):

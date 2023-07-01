@@ -54,22 +54,22 @@ class AvailableEmojisMixin:
             except XMPPError as e:
                 self.log.debug("Could not get the available emojis: %s", e)
                 return
-            emojis = set(chat.available_reactions)
-            return emojis
+            available_reactions = chat.available_reactions
+            if isinstance(available_reactions, tgapi.ChatAvailableReactionsSome):
+                emojis = set(r.emoji for r in available_reactions.reactions)
+                return emojis
+            legacy_msg_id = chat.last_message.id
 
         available = await self.session.tg.api.get_message_available_reactions(
-            chat_id=self.chat_id, message_id=legacy_msg_id
+            chat_id=self.chat_id, message_id=legacy_msg_id, row_size=25
         )
-        # TODO: figure out how we can actually determine if the user can use
-        #       premium emojis
-        # features = await self.session.tg.api.get_premium_features(
-        #     None, skip_validation=True
-        # )
-        # self.session.log.debug("Premium features: %s", features)
-        # for f in features.features:
-        #     if isinstance(f, tgapi.PremiumFeatureUniqueReactions):
-        #         return {a.reaction for a in available.reactions}
-        return {a.reaction for a in available.reactions if not a.needs_premium}
+        return {
+            a.type_.emoji
+            for a in available.top_reactions
+            + available.recent_reactions
+            + available.popular_reactions
+            if isinstance(a.type_, tgapi.ReactionTypeEmoji)
+        }
 
 
 class TelegramToXMPPMixin(ContentMessageMixin):

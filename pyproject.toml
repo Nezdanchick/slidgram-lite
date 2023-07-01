@@ -11,7 +11,7 @@ url = "https://slidge.im/repo"
 
 [tool.poetry.dependencies]
 python = "^3.9"
-aiotdlib = "^0.19.2+slidge1"
+aiotdlib = "^0.19.9+slidge2"
 
 [tool.poetry.dependencies.slidge]
 git = "https://git.sr.ht/~nicoco/slidge"
@@ -53,7 +53,7 @@ strict = false
 module = [
     "aiotdlib.*",
 ]
-ignore_missing_imports = true
+follow_imports = "skip"
 
 [tool.ruff]
 line-length = 120

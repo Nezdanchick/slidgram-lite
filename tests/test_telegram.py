@@ -80,7 +80,6 @@ class TestTelegram(TestTelegramBase):
 @pytest.mark.asyncio
 async def test_ignore_read_marks_confirmation():
     action = tgapi.UpdateChatReadInbox(
-        ID=123,
         chat_id=12345,
         last_read_inbox_message_id=123456789,
         unread_count=0,

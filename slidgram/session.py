@@ -153,7 +153,6 @@ class Session(BaseSession[int, Recipient]):
     async def displayed(self, c: Recipient, tg_id: int, thread=None):
         res = await self.tg.api.view_messages(
             chat_id=c.legacy_id,
-            message_thread_id=0,
             message_ids=[tg_id],
             force_read=True,
         )
@@ -201,12 +200,26 @@ class Session(BaseSession[int, Recipient]):
         )
 
     async def remove_reactions(self, c: "Recipient", legacy_msg_id):
+        added_reactions = await self.tg.api.get_message_added_reactions(
+            chat_id=c.legacy_id, message_id=legacy_msg_id, offset="", limit=100
+        )
+        my_id = await self.tg.get_my_id()
+        for r in added_reactions.reactions:
+            if not isinstance(r.type_, tgapi.ReactionTypeEmoji):
+                continue
+            if not isinstance(r.sender_id, tgapi.MessageSenderUser):
+                continue
+            if r.sender_id.user_id == my_id:
+                emoji = r.type_.emoji
+                break
+        else:
+            self.log.debug("Cannot find which reaction to remove")
+            return
         try:
-            r = await self.tg.api.set_message_reaction(
+            r = await self.tg.api.remove_message_reaction(
                 chat_id=c.legacy_id,
                 message_id=legacy_msg_id,
-                reaction="",
-                is_big=False,
+                reaction_type=tgapi.ReactionTypeEmoji(emoji=emoji),
             )
         except BadRequest as e:
             self.log.debug("Remove reaction error: %s", e)
@@ -223,10 +236,10 @@ class Session(BaseSession[int, Recipient]):
 
         # we never have more than 1 emoji, slidge core makes sure of that
         try:
-            r = await self.tg.api.set_message_reaction(
+            r = await self.tg.api.add_message_reaction(
                 chat_id=c.legacy_id,
                 message_id=legacy_msg_id,
-                reaction=emojis[0],
+                reaction_type=tgapi.ReactionTypeEmoji(emoji=emojis[0]),
                 is_big=False,
             )
         except BadRequest as e:
