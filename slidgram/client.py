@@ -7,6 +7,7 @@ import aiotdlib
 from aiotdlib import api as tgapi
 from aiotdlib.api import BaseObject
 from aiotdlib.client import RequestResult
+from slidge.core.contact.roster import ContactIsUser
 from slixmpp.exceptions import XMPPError
 
 from . import config
@@ -144,7 +145,10 @@ class TelegramClient(aiotdlib.Client):
         except IndexError:
             self.session.log.debug("Ignoring weird event: %s", update.ID)
         else:
-            await handler(update)
+            try:
+                await handler(update)
+            except ContactIsUser:
+                pass
 
     async def handle_NewMessage(self, update: tgapi.UpdateNewMessage):
         msg = update.message
