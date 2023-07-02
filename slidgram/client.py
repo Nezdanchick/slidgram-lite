@@ -67,7 +67,7 @@ class CredentialsValidation(aiotdlib.Client):
         ] = asyncio.get_running_loop().create_future()
         self.password = registration_form.get("password")
 
-    async def _auth_get_code(self):
+    async def _auth_get_code(self, code_type: str = "SMS"):
         return await self.code_future
 
     async def _auth_get_password(self):
