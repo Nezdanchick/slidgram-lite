@@ -145,12 +145,8 @@ class TelegramToXMPPMixin(ContentMessageMixin):
             self.send_text(body=emoji, **kwargs)
         elif isinstance(content, tgapi.MessageSticker):
             sticker = content.sticker
-            sticker_type = sticker.type_
-            if isinstance(sticker_type, tgapi.StickerTypeAnimated):
-                if t := sticker.thumbnail:
-                    await self.send_tg_file(t.file, **kwargs)
-                else:
-                    self.send_text(body="Sticker: " + sticker.emoji, **kwargs)
+            if thumbnail := sticker.thumbnail:
+                await self.send_tg_file(thumbnail.file, **kwargs)
             else:
                 await self.send_tg_file(sticker.sticker, **kwargs)
         elif best_file := get_best_file(content):
