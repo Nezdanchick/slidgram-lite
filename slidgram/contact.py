@@ -76,10 +76,11 @@ class Contact(TelegramToXMPPMixin, AvailableEmojisMixin, LegacyContact[int]):
         if user is None:
             user = await self.get_telegram_user()
 
-        name = user.first_name
-        if last := user.last_name:
-            name += " " + last
-        self.name = name
+        full_name = " ".join([user.first_name, user.last_name])
+        if user.usernames and (usernames := user.usernames.active_usernames):
+            self.name = usernames[0]
+        else:
+            self.name = full_name
 
         self.__avatar_fetch_task = self.xmpp.loop.create_task(self.__fetch_avatar(user))
 
@@ -93,7 +94,10 @@ class Contact(TelegramToXMPPMixin, AvailableEmojisMixin, LegacyContact[int]):
         else:
             phone = None
         self.set_vcard(
-            given=user.first_name, surname=user.last_name, phone=phone, full_name=name
+            given=user.first_name,
+            surname=user.last_name,
+            phone=phone,
+            full_name=full_name,
         )
 
         self.is_friend = user.is_contact or self.CLIENT_TYPE == "bot"
