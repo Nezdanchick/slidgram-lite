@@ -62,6 +62,8 @@ class AvailableEmojisMixin:
             if isinstance(available_reactions, tgapi.ChatAvailableReactionsSome):
                 emojis = set(r.emoji for r in available_reactions.reactions)
                 return emojis
+            if chat.last_message is None:
+                return _DEFAULT_REACTIONS
             legacy_msg_id = chat.last_message.id
 
         available = await self.session.tg.api.get_message_available_reactions(
@@ -227,3 +229,83 @@ class TelegramToXMPPMixin(ContentMessageMixin):
             legacy_file_id=str(best_file.remote.unique_id),
             **kwargs,
         )
+
+
+# This list is used when "all" telegram reactions are available.
+# I am not 100% sure that these are the default allowed reactions but couldn't find better, so that'll
+# do for now.
+_DEFAULT_REACTIONS = {
+    "🤩",
+    "💊",
+    "🤔",
+    "🔥",
+    "🤷‍♀",
+    "🤯",
+    "💔",
+    "🥴",
+    "🦄",
+    "🗿",
+    "👻",
+    "🕊",
+    "❤‍🔥",
+    "😍",
+    "👨‍💻",
+    "🤗",
+    "😐",
+    "🌚",
+    "😈",
+    "👾",
+    "❤",
+    "⚡",
+    "🆒",
+    "🤷",
+    "🙊",
+    "🤡",
+    "🖕",
+    "🎄",
+    "😁",
+    "✍",
+    "💋",
+    "😡",
+    "😘",
+    "🏆",
+    "🤮",
+    "💯",
+    "🙈",
+    "🥱",
+    "👀",
+    "💩",
+    "😭",
+    "🙉",
+    "🍓",
+    "😇",
+    "💘",
+    "😴",
+    "🎉",
+    "🤬",
+    "🙏",
+    "😎",
+    "😱",
+    "🍌",
+    "👌",
+    "🤓",
+    "👎",
+    "👍",
+    "🤪",
+    "🤨",
+    "🎃",
+    "🤝",
+    "💅",
+    "🤣",
+    "😢",
+    "😨",
+    "🎅",
+    "🐳",
+    "👏",
+    "☃",
+    "🥰",
+    "🤷‍♂",
+    "🍾",
+    "🌭",
+    "🫡",
+}
