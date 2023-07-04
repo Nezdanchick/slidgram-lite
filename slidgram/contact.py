@@ -77,10 +77,16 @@ class Contact(TelegramToXMPPMixin, AvailableEmojisMixin, LegacyContact[int]):
             user = await self.get_telegram_user()
 
         full_name = " ".join([user.first_name, user.last_name])
-        if user.usernames and (usernames := user.usernames.active_usernames):
-            self.name = usernames[0]
-        else:
+        if usernames := user.usernames:
+            self.name = usernames.editable_username
+        elif full_name.strip():
+            # it might just be a whitespace at this stage, so we don't set it,
+            # the participant ID will be displayed
             self.name = full_name
+        elif isinstance(user.type_, (tgapi.UserTypeUnknown, tgapi.UserTypeDeleted)):
+            self.name = f"{user.type_.ID.removeprefix('userType')} #{self.legacy_id}"
+        else:
+            self.log.error("Could not set name for %s", user)
 
         self.__avatar_fetch_task = self.xmpp.loop.create_task(self.__fetch_avatar(user))
 
