@@ -15,6 +15,16 @@ if TYPE_CHECKING:
     from .session import Session
 
 
+class NotAMember(XMPPError):
+    def __init__(self, status: tgapi.ChatMemberStatus):
+        super().__init__(
+            "not-authorized",
+            f"You don't belong to this group, your status is {status.ID}. "
+            "Use an official telegram client to change that.",
+        )
+        self.status = status
+
+
 class Bookmarks(LegacyBookmarks[int, "MUC"]):
     session: "Session"
 
@@ -93,11 +103,7 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
         else:
             raise XMPPError("bad-request", f"This is not a telegram group: {chat}")
         if not isinstance(group.status, self._VALID_MEMBER_STATUSES):
-            raise XMPPError(
-                "not-authorized",
-                f"You don't belong to this group, your status is {group.status}. "
-                f"Use an official telegram client to change that.",
-            )
+            raise NotAMember(group.status)
         if photo := info.photo:
             best = min(photo.sizes, key=lambda x: x.width).photo
             self.__avatar_fetch_task = self.xmpp.loop.create_task(

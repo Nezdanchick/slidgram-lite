@@ -11,10 +11,10 @@ from slidge.core.contact.roster import ContactIsUser
 from slixmpp.exceptions import XMPPError
 
 from . import config
+from .group import MUC, NotAMember, Participant
 
 if TYPE_CHECKING:
     from .contact import Contact
-    from .group import MUC, Participant
     from .session import Session
 
 
@@ -149,6 +149,10 @@ class TelegramClient(aiotdlib.Client):
                 await handler(update)
             except ContactIsUser:
                 pass
+            except NotAMember as e:
+                self.session.log.debug(
+                    "Ignoring update because member status is %s", e.status.ID
+                )
 
     async def handle_NewMessage(self, update: tgapi.UpdateNewMessage):
         msg = update.message
