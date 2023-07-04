@@ -20,10 +20,14 @@ def get_best_file(content: tgapi.MessageContent) -> Optional[tgapi.File]:
         return max(photo.sizes, key=lambda x: x.width).photo
     elif isinstance(content, tgapi.MessageVideo):
         return content.video.video
+    elif isinstance(content, tgapi.MessageVideoNote):
+        return content.video_note.video
     elif isinstance(content, tgapi.MessageAnimation):
         return content.animation.animation
     elif isinstance(content, tgapi.MessageAudio):
         return content.audio.audio
+    elif isinstance(content, tgapi.MessageVoiceNote):
+        return content.voice_note.voice
     elif isinstance(content, tgapi.MessageDocument):
         return content.document.document
     return None
