@@ -134,7 +134,7 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
         self.subject_date = datetime.fromtimestamp(msg.date, tz=timezone.utc)
         if isinstance(sender_id, tgapi.MessageSenderUser):
             if sender_id.user_id == await self.session.tg.get_my_id():
-                self.subject_setter = self.user_nick_non_none
+                self.subject_setter = await self.get_user_participant()
             else:
                 contact = await self.session.contacts.by_legacy_id(sender_id.user_id)
                 self.subject_setter = contact.name
