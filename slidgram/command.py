@@ -133,5 +133,61 @@ class JoinPublicChat(Command):
         return f"You can now '{chat.title}' at xmpp:{muc.jid}?join"
 
 
+class SearchPublicChats(Command):
+    NAME = "Search telegram public chats"
+    HELP = (
+        "Searches public chats by looking for specified query in their "
+        "username and title. Currently, only supergroups and "
+        "channels can be public. Returns a meaningful number of results."
+    )
+    NODE = CHAT_COMMAND = "search-chats"
+    ACCESS = CommandAccess.USER_LOGGED
+    INSTRUCTIONS = "Enter search terms"
+
+    async def run(self, _session, _ifrom, *_args):
+        return Form(
+            title=self.NAME,
+            instructions=self.INSTRUCTIONS,
+            fields=[FormField("query", label="Query")],
+            handler=self.step2,  # type:ignore
+        )
+
+    async def step2(self, form_values: dict, session: "Session", _ifrom):
+        query: str = form_values["query"]
+        tg = session.tg
+        resp = await tg.api.search_public_chats(query)
+        chats = list[tgapi.Chat]()
+        for chat_id in resp.chat_ids:
+            chat = await session.tg.get_chat(chat_id)
+            session.log.debug("Search result: %s", chat)
+            if isinstance(chat.type_, tgapi.ChatTypePrivate):
+                continue
+            chats.append(chat)
+        if not chats:
+            return "No results"
+        return Form(
+            title="Search results",
+            instructions="Select the chat you want to join",
+            fields=[
+                FormField(
+                    "chat",
+                    label="Group",
+                    type="list-single",
+                    options=[
+                        {"label": chat.title, "value": str(chat.id)} for chat in chats
+                    ],
+                )
+            ],
+            handler=self.join,  # type:ignore
+        )
+
+    @staticmethod
+    async def join(form_values: dict, session: "Session", _ifrom):
+        chat_id = int(form_values["chat"])
+        await session.tg.api.join_chat(chat_id)
+        muc = await session.bookmarks.by_legacy_id(chat_id)
+        return f"You can now join the chat at at xmpp:{muc.jid}?join"
+
+
 def fmt_timestamp(t: int):
     return datetime.fromtimestamp(t).isoformat(timespec="minutes")
