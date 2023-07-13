@@ -1,11 +1,13 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from aiotdlib import api as tgapi
 from slidge import FormField
 from slidge.core.command import Command, CommandAccess, Confirmation, Form, TableResult
 from slixmpp import JID
 
-from slidgram.session import Session
+if TYPE_CHECKING:
+    from .session import Session
 
 
 class SessionCommandMixin:
@@ -104,6 +106,31 @@ class TerminateSession(SessionCommandMixin, Command):
     async def finish(session: "Session", _ifrom, session_i: int):
         await session.tg.api.terminate_session(session_i)
         return "Session has been terminated"
+
+
+class JoinPublicChat(Command):
+    NAME = "Join a telegram public chat"
+    HELP = "Join a public channel, private group or supergroup"
+    NODE = CHAT_COMMAND = "join-chat"
+    ACCESS = CommandAccess.USER_LOGGED
+    INSTRUCTIONS = "Use a tg:// URI or a or a https://tg.me URL to join a group"
+
+    async def run(self, _session, _ifrom, *_args):
+        return Form(
+            title=self.NAME,
+            instructions=self.INSTRUCTIONS,
+            fields=[FormField("query", label="Username, tg:// or t.me URL")],
+            handler=self.finish,  # type:ignore
+        )
+
+    @staticmethod
+    async def finish(form_values: dict, session: "Session", _ifrom):
+        query: str = form_values["query"]
+        query = query.removeprefix("https://t.me/").removeprefix("tg://resolve?domain=")
+        chat = await session.tg.api.search_public_chat(query)
+        await session.tg.api.join_chat(chat.id)
+        muc = await session.bookmarks.by_legacy_id(chat.id)
+        return f"You can now '{chat.title}' at xmpp:{muc.jid}?join"
 
 
 def fmt_timestamp(t: int):
