@@ -8,6 +8,7 @@ import aiotdlib.api as tgapi
 from slidge import LegacyContact, LegacyRoster, global_config
 from slixmpp.exceptions import XMPPError
 
+from . import config
 from .util import AvailableEmojisMixin, TelegramToXMPPMixin
 
 if TYPE_CHECKING:
@@ -69,7 +70,8 @@ class Contact(TelegramToXMPPMixin, AvailableEmojisMixin, LegacyContact[int]):
 
     async def __fetch_avatar(self, user: tgapi.User):
         if photo := user.profile_photo:
-            if path := await self.session.tg.get_local_path(photo.small):
+            file = photo.big if config.BIG_AVATARS else photo.small
+            if path := await self.session.tg.get_local_path(file):
                 await self.set_avatar(path, photo.id)
 
     async def update_info(self, user: Optional[tgapi.User] = None):

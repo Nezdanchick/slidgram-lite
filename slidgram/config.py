@@ -47,3 +47,9 @@ MAX_PARALLEL_DOWNLOADS: int = 3
 MAX_PARALLEL_DOWNLOADS__DOC = (
     "Maximum number of parallel telegram downloads " "across all sessions."
 )
+
+BIG_AVATARS = False
+BIG_AVATARS__DOC = (
+    "Fetch contact avatars in high-resolution (640x640) instead of the "
+    "default 160x160. NB: slidge core main config AVATAR_SIZE still applies."
+)
