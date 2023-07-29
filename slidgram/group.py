@@ -116,6 +116,8 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
                 self.__avatar_fetch_task = self.xmpp.loop.create_task(
                     self.__fetch_avatar(best)
                 )
+        else:
+            self.avatar = None
         self.n_participants = group.member_count
         name = chat.title
         if getattr(chat.type_, "is_channel", False):
