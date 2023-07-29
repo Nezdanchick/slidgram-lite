@@ -90,7 +90,16 @@ class Contact(TelegramToXMPPMixin, AvailableEmojisMixin, LegacyContact[int]):
         else:
             self.log.error("Could not set name for %s", user)
 
-        self.__avatar_fetch_task = self.xmpp.loop.create_task(self.__fetch_avatar(user))
+        if photo := user.profile_photo:
+            if self.avatar != photo.id:
+                self.__avatar_fetch_task = self.xmpp.loop.create_task(
+                    self.__fetch_avatar(user)
+                )
+            else:
+                self.log.debug("Cached photo is OK")
+        else:
+            self.log.debug("No avatar")
+            self.avatar = None
 
         if isinstance(user.type_, tgapi.UserTypeBot) or user.id == 777000:
             # 777000 is not marked as bot, it's the "Telegram" contact, which gives
