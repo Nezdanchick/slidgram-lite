@@ -108,7 +108,7 @@ class Session(BaseSession[int, Recipient]):
             tmp_file_str = str(tmp_file)
             if stickers_pattern and re.match(stickers_pattern, file_name):
                 result = await self.tg.send_sticker(sticker=tmp_file_str, **kwargs)
-            elif type_ == "image":
+            elif type_ == "image" and tmp_file.stat().st_size < 10_000_000:
                 result = await self.tg.send_photo(photo=tmp_file_str, **kwargs)
             elif type_ == "video":
                 result = await self.tg.send_video(video=tmp_file_str, **kwargs)
