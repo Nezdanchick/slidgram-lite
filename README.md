@@ -2,7 +2,7 @@
 
 [Home](https://sr.ht/~nicoco/slidge) |
 [Docs](https://slidge.im/slidgram) |
-[Issues](https://sr.ht/~nicoco/slidge/slidgram) |
+[Issues](https://todo.sr.ht/~nicoco/slidgram) |
 [Patches](https://lists.sr.ht/~nicoco/public-inbox) |
 [Chat](xmpp:slidge@conference.nicoco.fr?join)
 
