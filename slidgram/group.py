@@ -112,9 +112,6 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
                 best = max(photo.sizes, key=lambda x: x.width).photo
             else:
                 best = min(photo.sizes, key=lambda x: x.width).photo
-            self.__avatar_fetch_task = self.xmpp.loop.create_task(
-                self.__fetch_avatar(best)
-            )
             if best.id != self.avatar:
                 self.__avatar_fetch_task = self.xmpp.loop.create_task(
                     self.__fetch_avatar(best)
