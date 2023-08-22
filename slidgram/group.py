@@ -4,8 +4,9 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional, Union
 
 import aiotdlib.api as tgapi
-from slidge import LegacyBookmarks, LegacyMUC, LegacyParticipant, MucType
 from slixmpp.exceptions import XMPPError
+
+from slidge import LegacyBookmarks, LegacyMUC, LegacyParticipant, MucType
 
 from . import config
 from .util import AvailableEmojisMixin, TelegramToXMPPMixin
@@ -83,7 +84,9 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
         self.chat_id = self.legacy_id
         #                                     tuple[participant, emoji]
         self.reactions = defaultdict[int, set[tuple[Participant, str]]](set)
-        self.session.xmpp.loop.create_task(self.update_subject_from_msg())
+        self.__fetch_subject_task = self.session.xmpp.loop.create_task(
+            self.update_subject_from_msg()
+        )
         self.__avatar_fetch_task = None
 
     async def __fetch_avatar(self, best: tgapi.File):
