@@ -53,6 +53,9 @@ def merge_consecutive_entities(entities: list[tgapi.TextEntity]):
 
 
 def entities_to_xep_0393(text: str, entities: list[tgapi.TextEntity]):
+    if not entities:
+        return text
+
     # when there is nesting, telegram split entities, but we want to
     # avoid "_this__*is bold*__nested in italic_"
 
