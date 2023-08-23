@@ -9,6 +9,7 @@ from slixmpp.exceptions import XMPPError
 from slidge import LegacyBookmarks, LegacyMUC, LegacyParticipant, MucType
 
 from . import config
+from .text_entities import formatted_text_to_xep_0393
 from .util import AvailableEmojisMixin, TelegramToXMPPMixin
 
 if TYPE_CHECKING:
@@ -151,9 +152,9 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
             self.subject_setter = self.name
 
         if isinstance(content, tgapi.MessagePhoto):
-            self.subject = content.caption.text
+            self.subject = formatted_text_to_xep_0393(content.caption)
         if isinstance(content, tgapi.MessageText):
-            self.subject = content.text.text
+            self.subject = formatted_text_to_xep_0393(content.text)
 
     async def fill_participants(self):
         self.log.debug("Getting participants")

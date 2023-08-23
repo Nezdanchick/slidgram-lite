@@ -8,6 +8,7 @@ from slidge.util.types import MessageReference
 from slixmpp.exceptions import XMPPError
 
 from . import config
+from .text_entities import formatted_text_to_xep_0393
 
 if TYPE_CHECKING:
     from .group import MUC
@@ -118,7 +119,7 @@ class TelegramToXMPPMixin(ContentMessageMixin):
             raise RuntimeError("This should not happen")
 
         if isinstance(reply_to_content, tgapi.MessageText):
-            slidge_reference.body = reply_to_content.text.text
+            slidge_reference.body = formatted_text_to_xep_0393(reply_to_content.text)
         elif isinstance(reply_to_content, tgapi.MessageAnimatedEmoji):
             slidge_reference.body = reply_to_content.animated_emoji.sticker.emoji
         elif isinstance(reply_to_content, tgapi.MessageSticker):
@@ -145,7 +146,10 @@ class TelegramToXMPPMixin(ContentMessageMixin):
         if isinstance(content, tgapi.MessageText):
             # TODO: parse formatted text to markdown
             formatted_text = content.text
-            self.send_text(body=formatted_text.text, **kwargs)
+            self.send_text(
+                body=formatted_text_to_xep_0393(formatted_text),
+                **kwargs,
+            )
         elif isinstance(content, tgapi.MessageAnimatedEmoji):
             emoji = content.animated_emoji.sticker.emoji
             self.send_text(body=emoji, **kwargs)
@@ -158,7 +162,10 @@ class TelegramToXMPPMixin(ContentMessageMixin):
         elif best_file := get_best_file(content):
             assert hasattr(content, "caption")
             await self.send_tg_file(
-                best_file, content.caption.text, get_file_name(content), **kwargs
+                best_file,
+                formatted_text_to_xep_0393(content.caption),
+                get_file_name(content),
+                **kwargs,
             )
         elif isinstance(content, tgapi.MessageBasicGroupChatCreate):
             # TODO: work out how to map this to group invitation
