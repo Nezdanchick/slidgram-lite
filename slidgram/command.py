@@ -2,10 +2,9 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 from aiotdlib import api as tgapi
-from slixmpp import JID
-
 from slidge import FormField
 from slidge.core.command import Command, CommandAccess, Confirmation, Form, TableResult
+from slixmpp import JID
 
 if TYPE_CHECKING:
     from .session import Session

@@ -4,9 +4,8 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional, Union
 
 import aiotdlib.api as tgapi
-from slixmpp.exceptions import XMPPError
-
 from slidge import LegacyBookmarks, LegacyMUC, LegacyParticipant, MucType
+from slixmpp.exceptions import XMPPError
 
 from . import config
 from .text_entities import formatted_text_to_xep_0393
