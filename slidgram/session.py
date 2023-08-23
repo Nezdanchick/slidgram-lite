@@ -8,8 +8,9 @@ from typing import Union
 
 import aiotdlib.api as tgapi
 from aiotdlib.api.errors import BadRequest
-from slidge import BaseSession, FormField, SearchResult
 from slixmpp.exceptions import XMPPError
+
+from slidge import BaseSession, FormField, SearchResult
 
 from . import config
 from .client import TelegramClient
@@ -86,10 +87,11 @@ class Session(BaseSession[int, Recipient]):
         reply_to=None,
         **kwargs,
     ) -> int:
-        text = escape(text)
-        result = await self.tg.send_text(
-            chat_id=chat.legacy_id, text=text, reply_to_message_id=reply_to_msg_id
-        )
+        kwargs = dict(chat_id=chat.legacy_id, reply_to_message_id=reply_to_msg_id)
+        try:
+            result = await self.tg.send_text(text=text, **kwargs)
+        except tgapi.AioTDLibError:
+            result = await self.tg.send_text(text=escape(text), **kwargs)
         new_message_id = await self.wait_for_tdlib_success(result.id)
         self.log.debug("Result: %s / %s", result, new_message_id)
         return new_message_id
