@@ -182,6 +182,13 @@ class TelegramToXMPPMixin(ContentMessageMixin):
             await muc.update_subject_from_msg()
         elif isinstance(content, tgapi.MessageCustomServiceAction):
             self.send_text(body=content.text, **kwargs)
+        elif isinstance(content, tgapi.MessageChatChangeTitle):
+            if not self.is_group:
+                self.session.log.warning("Change title of a 1:1 chat?: %s", content)
+                return
+            self.muc.name = self.muc.description = content.title
+        elif isinstance(content, tgapi.MessageSupergroupChatCreate):
+            self.send_text(f"/me created a new super group chat: {content.title}")
         else:
             self.send_text(
                 f"/me tried to send an unsupported content: {type(content)}.",
