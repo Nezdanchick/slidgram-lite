@@ -67,7 +67,7 @@
         </implements>
         <implements>
             <xmpp:SupportedXep>
-                <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0256.html" />
+                <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0319.html" />
                 <xmpp:status>complete</xmpp:status>
 
             </xmpp:SupportedXep>
@@ -83,7 +83,7 @@
             <xmpp:SupportedXep>
                 <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0333.html" />
                 <xmpp:status>complete</xmpp:status>
-                 <xmpp:note>Only displayed markers have an equivalence in Telegram. They are also used to sync read state from and to Telegram clients.</xmpp:note>
+                 <xmpp:note>Only displayed markers have an equivalence in Telegram. They are also used to sync read state from and to Telegram clients. In groups, you only receive displayed markers for message you have sent, not for messages from other participants.</xmpp:note>
             </xmpp:SupportedXep>
         </implements>
         <implements>
@@ -91,6 +91,13 @@
                 <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0363.html" />
                 <xmpp:status>complete</xmpp:status>
 
+            </xmpp:SupportedXep>
+        </implements>
+        <implements>
+            <xmpp:SupportedXep>
+                <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0393.html" />
+                <xmpp:status>partial</xmpp:status>
+                 <xmpp:note>Incoming telegram messages formatting are converted to XEP-0393 styling, with links added as <https://url>. XMPP to telegram XEP-0393 is not supported, but telegram markdown is, as long as the escaping rules are respected. A proper XEP-0393 parser may be added later. <https://core.telegram.org/bots/api#formatting-options></xmpp:note>
             </xmpp:SupportedXep>
         </implements>
         <implements>
