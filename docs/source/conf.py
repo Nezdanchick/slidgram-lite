@@ -31,5 +31,3 @@ intersphinx_mapping = {
 }
 
 extlinks = {"xep": ("https://xmpp.org/extensions/xep-%s.html", "XEP-%s")}
-
-html_theme = "furo"
