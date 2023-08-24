@@ -252,7 +252,11 @@ class TelegramClient(aiotdlib.Client):
             fut.set_result(None)
             return
 
-        msg = await self.api.get_message(chat_id, corrected_msg_id)
+        try:
+            msg = await self.api.get_message(chat_id, corrected_msg_id)
+        except NotFound:
+            self.log.debug("Ignoring update of message that cannot be found anymore.")
+            return
         sender = await self.__get_contact_or_participant(msg)
         await sender.send_tg_message(msg, correction=True)
 
