@@ -70,8 +70,6 @@ class Bookmarks(LegacyBookmarks[int, "MUC"]):
 class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
     MAX_SUPER_GROUP_PARTICIPANTS = 200
     session: "Session"
-    # all group chats in telegram correspond are closer to modern XMPP 'groups' than 'channels'
-    type = MucType.GROUP
     _VALID_MEMBER_STATUSES = (
         tgapi.ChatMemberStatusMember,
         tgapi.ChatMemberStatusAdministrator,
@@ -100,9 +98,14 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
         if isinstance(chat.type_, tgapi.ChatTypeBasicGroup):
             group = await tg.get_basic_group(chat.type_.basic_group_id)
             info = await tg.get_basic_group_full_info(group.id)
+            self.type = MucType.GROUP
         elif isinstance(chat.type_, tgapi.ChatTypeSupergroup):
             group = await tg.get_supergroup(chat.type_.supergroup_id)
             info = await tg.get_supergroup_full_info(group.id)
+            if info.can_get_members:
+                self.type = MucType.CHANNEL_NON_ANONYMOUS
+            else:
+                self.type = MucType.CHANNEL
         else:
             raise XMPPError("bad-request", f"This is not a telegram group: {chat}")
         if not isinstance(group.status, self._VALID_MEMBER_STATUSES):
