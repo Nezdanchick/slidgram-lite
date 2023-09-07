@@ -6,8 +6,13 @@ authors = ["nicoco <nicoco@nicoco.fr>"]
 readme = "README.md"
 
 [[tool.poetry.source]]
+name = "PyPI"
+priority = "primary"
+
+[[tool.poetry.source]]
 name = "slidge-repo"
 url = "https://slidge.im/repo"
+priority = "primary"
 
 [tool.poetry.dependencies]
 python = "^3.9"
