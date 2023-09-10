@@ -437,3 +437,16 @@ class TelegramClient(aiotdlib.Client):
                 return None
 
         return Path(file.local.path)
+
+    async def send_formatted_text(
+        self,
+        chat_id: int,
+        text: tgapi.FormattedText,
+        *,
+        reply_to_message_id: Optional[int] = None,
+    ):
+        return await self._Client__send_message(
+            chat_id=chat_id,
+            content=tgapi.InputMessageText.construct(text=text),
+            reply_to_message_id=reply_to_message_id,
+        )

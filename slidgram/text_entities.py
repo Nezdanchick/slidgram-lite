@@ -1,14 +1,47 @@
 """
 Converts telegram formatted text to XEP-0393 (message styling) strings.
 """
-
+from dataclasses import dataclass
 from typing import Optional
 
 from aiotdlib import api as tgapi
+from slidge_style_parser import format_for_telegram  # type:ignore
+
+PARSER_TO_ENTITY = {
+    "italics": tgapi.TextEntityTypeItalic,
+    "bold": tgapi.TextEntityTypeBold,
+    "strikethrough": tgapi.TextEntityTypeStrikethrough,
+    "pre": tgapi.TextEntityTypeCode,
+    "code": tgapi.TextEntityTypeCode,
+    "spoiler": tgapi.TextEntityTypeSpoiler,
+}
+
+
+@dataclass
+class Style:
+    type_: str
+    offset: int
+    length: int
+    lang: str
+
+    def to_entity(self):
+        if self.lang:
+            type_ = tgapi.TextEntityTypePreCode(language=self.lang)
+        else:
+            type_ = PARSER_TO_ENTITY.get(self.type_, tgapi.TextEntityTypeCode)()
+        return tgapi.TextEntity(type_=type_, offset=self.offset, length=self.length)
 
 
 def formatted_text_to_xep_0393(t: tgapi.FormattedText):
     return entities_to_xep_0393(t.text, t.entities)
+
+
+def to_formatted_text(t: str) -> tgapi.FormattedText:
+    text, blocks = format_for_telegram(t)
+    return tgapi.FormattedText(
+        text=text,
+        entities=[Style(*b).to_entity() for b in blocks],
+    )
 
 
 def to_xep_0393(t: bytes, entity: Optional[tgapi.TextEntity] = None):

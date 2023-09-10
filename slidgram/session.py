@@ -16,6 +16,7 @@ from .client import TelegramClient
 from .contact import Contact
 from .gateway import Gateway
 from .group import MUC
+from .text_entities import to_formatted_text
 
 
 def catch_chat_not_found(coroutine):
@@ -86,11 +87,11 @@ class Session(BaseSession[int, Recipient]):
         reply_to=None,
         **kwargs,
     ) -> int:
-        kwargs = dict(chat_id=chat.legacy_id, reply_to_message_id=reply_to_msg_id)
-        try:
-            result = await self.tg.send_text(text=text, **kwargs)
-        except tgapi.AioTDLibError:
-            result = await self.tg.send_text(text=escape(text), **kwargs)
+        result = await self.tg.send_formatted_text(
+            text=to_formatted_text(text),
+            chat_id=chat.legacy_id,
+            reply_to_message_id=reply_to_msg_id,
+        )
         new_message_id = await self.wait_for_tdlib_success(result.id)
         self.log.debug("Result: %s / %s", result, new_message_id)
         return new_message_id
@@ -167,7 +168,7 @@ class Session(BaseSession[int, Recipient]):
             message_id=legacy_msg_id,
             reply_markup=None,  # type:ignore
             input_message_content=tgapi.InputMessageText.construct(
-                text=tgapi.FormattedText.construct(text=text)
+                text=to_formatted_text(text)
             ),
             skip_validation=True,
         )
@@ -256,12 +257,5 @@ class Session(BaseSession[int, Recipient]):
         confirmation = await f
         self.log.debug("Message delete confirmation: %s", confirmation)
 
-
-def escape(t: str):
-    return re.sub(ESCAPE_PATTERN, r"\\\1", t)
-
-
-RESERVED_CHARS = r"_*[]()~`>#+-=|{}.!\\"
-ESCAPE_PATTERN = re.compile(f"([{re.escape(RESERVED_CHARS)}])")
 
 log = logging.getLogger(__name__)
