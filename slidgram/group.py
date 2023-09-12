@@ -90,6 +90,22 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
     async def __fetch_avatar(self, best: tgapi.File):
         await self.set_avatar(await self.session.tg.get_local_path(best), best.id)
 
+    def update_tg_photo(self, photo: Optional[tgapi.ChatPhoto]) -> None:
+        if not photo:
+            self.avatar = None
+            return
+
+        if config.BIG_AVATARS:
+            best = max(photo.sizes, key=lambda x: x.width).photo
+        else:
+            best = min(photo.sizes, key=lambda x: x.width).photo
+        if best.id != self.avatar:
+            if self.__avatar_fetch_task:
+                self.__avatar_fetch_task.cancel()
+            self.__avatar_fetch_task = self.xmpp.loop.create_task(
+                self.__fetch_avatar(best)
+            )
+
     async def update_info(self):
         tg = self.session.tg
         chat = await tg.get_chat(self.legacy_id)
@@ -110,17 +126,7 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
             raise XMPPError("bad-request", f"This is not a telegram group: {chat}")
         if not isinstance(group.status, self._VALID_MEMBER_STATUSES):
             raise NotAMember(group.status)
-        if photo := info.photo:
-            if config.BIG_AVATARS:
-                best = max(photo.sizes, key=lambda x: x.width).photo
-            else:
-                best = min(photo.sizes, key=lambda x: x.width).photo
-            if best.id != self.avatar:
-                self.__avatar_fetch_task = self.xmpp.loop.create_task(
-                    self.__fetch_avatar(best)
-                )
-        else:
-            self.avatar = None
+        self.update_tg_photo(info.photo)
         self.n_participants = group.member_count
         name = chat.title
         if getattr(chat.type_, "is_channel", False):

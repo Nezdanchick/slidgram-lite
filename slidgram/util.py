@@ -189,6 +189,12 @@ class TelegramToXMPPMixin(ContentMessageMixin):
             self.muc.name = self.muc.description = content.title
         elif isinstance(content, tgapi.MessageSupergroupChatCreate):
             self.send_text(f"/me created a new super group chat: {content.title}")
+        elif isinstance(content, tgapi.MessageChatChangePhoto):
+            self.send_text("/me updated the chat photo")
+            self.muc.update_tg_photo(content.photo)
+        elif isinstance(content, tgapi.MessageChatDeletePhoto):
+            self.send_text("/me deleted the chat photo")
+            self.muc.update_tg_photo(None)
         else:
             self.send_text(
                 f"/me tried to send an unsupported content: {type(content)}.",
