@@ -10,7 +10,7 @@ artifacts:
   - ./package.tar
 tasks:
   - install: |
-      sudo pip install poetry --break-system-packages
+      sudo pip install poetry
       cd slidgram
       poetry install
       poetry run c3p0 slidgram
