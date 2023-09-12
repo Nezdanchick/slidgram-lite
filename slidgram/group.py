@@ -175,7 +175,10 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
         info = await self.session.tg.get_chat_info(chat, full=True)
         if isinstance(info, tgapi.BasicGroupFullInfo):
             members = info.members
+            read_only = False
         elif isinstance(info, tgapi.SupergroupFullInfo):
+            group = await self.session.tg.get_supergroup(chat.type_.supergroup_id)
+            read_only = group.is_broadcast_group or group.is_channel
             if info.can_get_members:
                 members = (
                     await self.session.tg.api.get_supergroup_members(
@@ -187,6 +190,10 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
                     )
                 ).members
             else:
+                if read_only:
+                    part = await self.get_user_participant()
+                    part.affiliation = "member"
+                    part.role = "visitor"
                 members = []
         else:
             raise RuntimeError
@@ -208,6 +215,9 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
                 part.role = "none"
                 part.affiliation = "outcast"
                 part.offline()
+            elif read_only:
+                part.affiliation = "member"
+                part.role = "visitor"
 
     async def send_text(self, text: str) -> int:
         result = await self.session.tg.send_text(self.legacy_id, text)
