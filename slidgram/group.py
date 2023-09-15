@@ -284,6 +284,26 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
         else:
             return self.get_system_participant()
 
+    async def admin_set_avatar(
+        self, data: Optional[bytes], mime: Optional[str]
+    ) -> Optional[Union[int, str]]:
+        if data:
+            with tempfile.NamedTemporaryFile(
+                suffix=mimetypes.guess_extension(mime) if mime else None
+            ) as f:
+                f.write(data)
+                f.flush()
+                response = await self.session.tg.api.set_chat_photo(
+                    self.legacy_id,
+                    tgapi.InputChatPhotoStatic(photo=tgapi.InputFileLocal(path=f.name))
+                    if data
+                    else None,
+                )
+        else:
+            response = await self.session.tg.api.set_chat_photo(self.legacy_id, None)
+        self.log.debug("Set room avatar response: %s", response)
+        return None
+
 
 class Participant(LegacyParticipant, TelegramToXMPPMixin):
     contact: "Contact"
