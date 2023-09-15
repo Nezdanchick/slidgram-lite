@@ -87,8 +87,21 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
         )
         self.__avatar_fetch_task = None
 
+    @staticmethod
+    def __avatar_id(best: tgapi.File) -> Optional[int]:
+        if best.remote.unique_id:
+            id_ = best.remote.unique_id
+        elif best.remote.id:
+            id_ = best.remote.id
+        elif best.id:
+            id_ = best.id
+        else:
+            id_ = None
+        return id_
+
     async def __fetch_avatar(self, best: tgapi.File):
-        await self.set_avatar(await self.session.tg.get_local_path(best), best.id)
+        local_path = await self.session.tg.get_local_path(best)
+        await self.set_avatar(local_path, self.__avatar_id(best))
 
     def update_tg_photo(self, photo: Optional[tgapi.ChatPhoto]) -> None:
         if not photo:
@@ -99,7 +112,7 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
             best = max(photo.sizes, key=lambda x: x.width).photo
         else:
             best = min(photo.sizes, key=lambda x: x.width).photo
-        if best.id != self.avatar:
+        if self.__avatar_id(best) != self.avatar:
             if self.__avatar_fetch_task:
                 self.__avatar_fetch_task.cancel()
             self.__avatar_fetch_task = self.xmpp.loop.create_task(
