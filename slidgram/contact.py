@@ -23,14 +23,19 @@ class Contact(TelegramToXMPPMixin, AvailableEmojisMixin, LegacyContact[int]):
     CLIENT_TYPE = "phone"
     session: "Session"
 
+    UNKNOWN_RETRY_DELAY = 5
+    UNKNOWN_RETRY_MAX_DELAY = 600
+    UNKNOWN_MAX_ATTEMPTS = 10
+
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
         self.chat_id = self.legacy_id
         self._online_expire_task = self.xmpp.loop.create_task(noop())
         self.__avatar_fetch_task = None
+        self.__profile_fetch_task = None
 
-    async def get_telegram_user(self):
-        return await self.session.tg.get_user(self.legacy_id)
+    async def get_telegram_user(self, force_update: bool = False):
+        return await self.session.tg.get_user(self.legacy_id, force_update=force_update)
 
     async def _expire_online(self, timestamp: Union[int, float]):
         now = time.time()
@@ -74,7 +79,22 @@ class Contact(TelegramToXMPPMixin, AvailableEmojisMixin, LegacyContact[int]):
             if path := await self.session.tg.get_local_path(file):
                 await self.set_avatar(path, photo.id)
 
-    async def update_info(self, user: Optional[tgapi.User] = None):
+    async def __fetch_profile(self):
+        for i in range(self.UNKNOWN_MAX_ATTEMPTS):
+            wait = min(self.UNKNOWN_RETRY_DELAY * i, self.UNKNOWN_RETRY_MAX_DELAY)
+            self.log.debug("Waiting %s seconds before retrying to fetch my profile")
+            await asyncio.sleep(wait)
+            user = await self.get_telegram_user(force_update=True)
+            if not isinstance(user.type_, tgapi.UserTypeUnknown):
+                self.log.debug("Oh cool, now I'm not unknown anymore")
+                await self.update_info(user)
+                return
+            self.log.debug("I'm still unknown!")
+        self.log.warning("Giving up on trying to fetch details of an 'unknown user'")
+
+    async def update_info(
+        self, user: Optional[tgapi.User] = None, force_user_update=False
+    ):
         if user is None:
             user = await self.get_telegram_user()
 
@@ -85,8 +105,11 @@ class Contact(TelegramToXMPPMixin, AvailableEmojisMixin, LegacyContact[int]):
             # it might just be a whitespace at this stage, so we don't set it,
             # the participant ID will be displayed
             self.name = full_name
-        elif isinstance(user.type_, (tgapi.UserTypeUnknown, tgapi.UserTypeDeleted)):
-            self.name = f"{user.type_.ID.removeprefix('userType')} #{self.legacy_id}"
+        elif isinstance(user.type_, tgapi.UserTypeUnknown):
+            self.name = f"Unknown user #{self.legacy_id}"
+            self.__profile_fetch_task = asyncio.create_task(self.__fetch_profile())
+        elif isinstance(user.type_, tgapi.UserTypeDeleted):
+            self.name = f"Deleted user #{self.legacy_id}"
         else:
             self.log.error("Could not set name for %s", user)
 
