@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 
 from aiotdlib import api as tgapi
 from slidge import FormField
-from slidge.core.command import Command, CommandAccess, Confirmation, Form, TableResult
+from slidge.command import Command, CommandAccess, Confirmation, Form, TableResult
 from slixmpp import JID
 
 if TYPE_CHECKING:

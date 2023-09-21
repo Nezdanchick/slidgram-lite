@@ -4,7 +4,7 @@ import shutil
 import typing
 
 from slidge import BaseGateway, FormField, GatewayUser, global_config, user_store
-from slidge.core.command.register import RegistrationType
+from slidge.command.register import RegistrationType
 from slidge.util.util import is_valid_phone_number
 from slixmpp import JID
 from slixmpp.exceptions import XMPPError

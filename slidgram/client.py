@@ -7,7 +7,7 @@ import aiotdlib
 from aiotdlib import api as tgapi
 from aiotdlib.api import BaseObject
 from aiotdlib.client import RequestResult
-from slidge.core.contact.roster import ContactIsUser
+from slidge.contact.roster import ContactIsUser
 from slixmpp.exceptions import XMPPError
 
 from . import config
