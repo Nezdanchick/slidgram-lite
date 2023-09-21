@@ -86,10 +86,10 @@ class TelegramToXMPPMixin(ContentMessageMixin):
     muc: "MUC"
 
     async def _get_reply_to(self, msg: tgapi.Message):
-        if not (reply_to := msg.reply_to_message_id):
+        if not (reply := msg.reply_to):
             # if reply_to = 0, telegram really means "None"
             return
-
+        reply_to = reply.message_id
         slidge_reference = MessageReference(legacy_id=reply_to)
 
         try:
