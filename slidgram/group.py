@@ -1,4 +1,6 @@
 import asyncio
+import mimetypes
+import tempfile
 from collections import defaultdict
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional, Union
