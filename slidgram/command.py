@@ -15,7 +15,9 @@ class SessionCommandMixin:
 
     async def run(self, session, ifrom: JID, *args):
         assert session is not None
-        tg_sessions = (await session.tg.api.get_active_sessions()).sessions
+        tg_sessions: list[tgapi.Session] = (
+            await session.tg.api.get_active_sessions()
+        ).sessions
         if args:
             return await self.step2(
                 {"tg-session": args[0]}, session, ifrom, tg_sessions
@@ -29,7 +31,10 @@ class SessionCommandMixin:
                     type="list-single",
                     label="Session",
                     options=[
-                        {"label": f"{i}: {s.country} ({s.region})", "value": str(i)}
+                        {
+                            "label": f"{i}: {s.location} ({s.application_name})",
+                            "value": str(i),
+                        }
                         for i, s in enumerate(tg_sessions)
                     ],
                 )
@@ -61,9 +66,8 @@ class ListSessions(SessionCommandMixin, Command):
                 "is_current",
                 "type_",
                 "application_name",
-                "ip",
-                "country",
-                "region",
+                "ip_address",
+                "location",
             ]
         ]
         items.extend(
