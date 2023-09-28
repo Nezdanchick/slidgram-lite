@@ -16,11 +16,12 @@ tasks:
       poetry run c3p0 slidgram
       poetry run set_version
       poetry build
-      tar cvf ~/package.tar dist/*
+      cd dist
+      tar cvf ~/package.tar *
   - tests: |
       cd slidgram
       poetry run ruff .
-      poetry run mypy .
+      poetry run mypy
       poetry run pytest tests
       poetry run black --check .
       poetry run isort --check .

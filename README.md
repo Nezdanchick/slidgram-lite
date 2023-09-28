@@ -36,12 +36,16 @@ docker run docker.io/nicocool84/slidgram
 With [pipx](https://pypa.github.io/pipx/):
 
 ```sh
-pipx install slidgram  # for the latest tagged release
+
+# for the latest stable release (if any)
+pipx install slidgram
+
+# for the bleeding edge
+pipx install slidgram \
+    --pip-args='--extra-index-url https://slidge.im/repo'
+
 slidgram --help
 ```
-
-For the bleeding edge, download artifacts of
-[this build job](https://builds.sr.ht/~nicoco/slidgram/commits/master/ci.yml).
 
 ## Dev
 
