@@ -20,7 +20,7 @@ async def noop():
 
 
 class Contact(TelegramToXMPPMixin, AvailableEmojisMixin, LegacyContact[int]):
-    CLIENT_TYPE = "phone"
+    DISCO_TYPE = "phone"
     session: "Session"
 
     UNKNOWN_RETRY_DELAY = 5
@@ -127,7 +127,7 @@ class Contact(TelegramToXMPPMixin, AvailableEmojisMixin, LegacyContact[int]):
         if isinstance(user.type_, tgapi.UserTypeBot) or user.id == 777000:
             # 777000 is not marked as bot, it's the "Telegram" contact, which gives
             # confirmation codes and announces telegram-related stuff
-            self.CLIENT_TYPE = "bot"
+            self.DISCO_TYPE = "bot"
 
         if p := user.phone_number:
             phone = "+" + p
@@ -140,7 +140,7 @@ class Contact(TelegramToXMPPMixin, AvailableEmojisMixin, LegacyContact[int]):
             full_name=full_name,
         )
 
-        self.is_friend = user.is_contact or self.CLIENT_TYPE == "bot"
+        self.is_friend = user.is_contact or self.DISCO_TYPE == "bot"
         if self.is_friend:
             await self.add_to_roster()
             self.update_status(user.status)
