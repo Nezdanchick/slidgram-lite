@@ -150,6 +150,8 @@ class TelegramToXMPPMixin(ContentMessageMixin):
                 body=formatted_text_to_xep_0393(formatted_text),
                 **kwargs,
             )
+        elif isinstance(content, tgapi.MessageContactRegistered):
+            self.send_text("/me has just registered a Telegram account", **kwargs)
         elif isinstance(content, tgapi.MessageAnimatedEmoji):
             emoji = content.animated_emoji.sticker.emoji
             self.send_text(body=emoji, **kwargs)
