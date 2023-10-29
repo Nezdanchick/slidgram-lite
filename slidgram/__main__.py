@@ -1,11 +1,8 @@
-import sys
-
-from slidge.__main__ import main as slidge_main
+from slidge import entrypoint
 
 
-def main() -> None:
-    sys.argv.extend(["--legacy", "slidgram"])
-    slidge_main()
+def main():
+    entrypoint("slidgram")
 
 
 if __name__ == "__main__":
