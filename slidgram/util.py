@@ -177,6 +177,13 @@ class TelegramToXMPPMixin(ContentMessageMixin):
             for user_id in content.member_user_ids:
                 participant = await muc.get_participant_by_legacy_id(user_id)
                 participant.online()
+        elif isinstance(content, tgapi.MessageChatDeleteMember):
+            if not hasattr(self, "muc"):
+                self.session.log.warning(
+                    "Deleted member received for a 1:1 chat, wtf? %", msg
+                )
+                return
+            self.muc.remove_participant(self)  # type:ignore
         elif isinstance(content, tgapi.MessagePinMessage):
             if await self.session.tg.is_private_chat(msg.chat_id):
                 return
