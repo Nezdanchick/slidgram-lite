@@ -54,7 +54,7 @@ class Session(BaseSession[int, Recipient]):
         self.tg = TelegramClient(self)
 
     @staticmethod
-    def xmpp_msg_id_to_legacy_msg_id(i: str) -> int:
+    def xmpp_to_legacy_msg_id(i: str) -> int:
         return int(i)
 
     async def login(self):
