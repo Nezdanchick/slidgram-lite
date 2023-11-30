@@ -36,6 +36,8 @@ furo = "^2023.3.27"
 sphinx-autoapi = "^3"
 sphinx-argparse = "^0.4.0"
 sphinx-mdinclude = "^0.5.3"
+types-pillow = "^10.1.0.2"
+
 [tool.poetry.group.dev.dependencies.slidge-dev-helpers]
 git = "https://git.sr.ht/~nicoco/slidge-dev-helpers"
 branch = "master"

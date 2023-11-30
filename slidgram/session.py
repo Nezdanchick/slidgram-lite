@@ -3,11 +3,13 @@ import functools
 import logging
 import re
 import tempfile
+from io import BytesIO
 from pathlib import Path
 from typing import Union
 
 import aiotdlib.api as tgapi
 from aiotdlib.api.errors import BadRequest
+from PIL import Image
 from slidge import BaseSession, FormField, SearchResult
 from slixmpp.exceptions import XMPPError
 
@@ -256,6 +258,28 @@ class Session(BaseSession[int, Recipient]):
         self.log.debug("Delete message response: %s", r)
         confirmation = await f
         self.log.debug("Message delete confirmation: %s", confirmation)
+
+    async def on_avatar(
+        self, bytes_: bytes, hash_: str, type_: str, width: int, height: int
+    ):
+        # always png in theory (xep-0084 forces it),
+        # but some XMPP clients do not respect that so let's not convert
+        # uselessly in case it's already JPEG (which telegram needs)
+        if not any(x in type_.lower() for x in ("jpg", "jpeg")):
+            img = Image.open(BytesIO(bytes_))
+            self.log.debug("Image needs conversion")
+            with BytesIO() as f:
+                img_no_alpha = img.convert("RGB")
+                img_no_alpha.save(f, format="JPEG")
+                f.flush()
+                f.seek(0)
+                avatar_bytes = f.read()
+        with tempfile.NamedTemporaryFile("wb") as f:
+            f.write(avatar_bytes)
+            f.flush()
+            await self.tg.api.set_profile_photo(
+                tgapi.InputChatPhotoStatic(photo=tgapi.InputFileLocal(path=f.name))
+            )
 
 
 log = logging.getLogger(__name__)
