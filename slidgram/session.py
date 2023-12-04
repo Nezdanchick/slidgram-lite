@@ -273,9 +273,9 @@ class Session(BaseSession[int, Recipient]):
                 img_no_alpha.save(f, format="JPEG")
                 f.flush()
                 f.seek(0)
-                avatar_bytes = f.read()
+                bytes_ = f.read()
         with tempfile.NamedTemporaryFile("wb") as f:
-            f.write(avatar_bytes)
+            f.write(bytes_)
             f.flush()
             await self.tg.api.set_profile_photo(
                 tgapi.InputChatPhotoStatic(photo=tgapi.InputFileLocal(path=f.name))
