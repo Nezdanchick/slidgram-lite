@@ -5,7 +5,7 @@ import re
 import tempfile
 from io import BytesIO
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 import aiotdlib.api as tgapi
 from aiotdlib.api.errors import BadRequest
@@ -260,12 +260,35 @@ class Session(BaseSession[int, Recipient]):
         self.log.debug("Message delete confirmation: %s", confirmation)
 
     async def on_avatar(
-        self, bytes_: bytes, hash_: str, type_: str, width: int, height: int
-    ):
+        self,
+        bytes_: Optional[bytes],
+        hash_: Optional[str],
+        type_: Optional[str],
+        width: Optional[int],
+        height: Optional[int],
+    ) -> None:
+        # telegram allows setting several profile pictures, to mimic XMPP
+        # behaviour, we remove them all before setting the new one.
+        # while this is suboptimal, not doing so results in many duplicate
+        # profile pictures so the workaround seems OK
+        n = 0
+        ids = []
+        while True:
+            resp = await self.tg.api.get_user_profile_photos(
+                await self.tg.get_my_id(), offset=n, limit=100
+            )
+            if not resp.photos:
+                break
+            ids.extend([p.id for p in resp.photos])
+            n += len(resp.photos)
+        for i in ids:
+            await self.tg.api.delete_profile_photo(i)
+        if bytes_ is None:
+            return
         # always png in theory (xep-0084 forces it),
         # but some XMPP clients do not respect that so let's not convert
         # uselessly in case it's already JPEG (which telegram needs)
-        if not any(x in type_.lower() for x in ("jpg", "jpeg")):
+        if type_ and not any(x in type_.lower() for x in ("jpg", "jpeg")):
             img = Image.open(BytesIO(bytes_))
             self.log.debug("Image needs conversion")
             with BytesIO() as f:
