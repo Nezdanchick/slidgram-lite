@@ -304,5 +304,16 @@ class Session(BaseSession[int, Recipient]):
                 tgapi.InputChatPhotoStatic(photo=tgapi.InputFileLocal(path=f.name))
             )
 
+    async def on_moderate(
+        self,
+        muc: MUC,  # type: ignore
+        legacy_msg_id: int,
+        reason: Optional[str],
+    ):
+        # no way to specify the reason in telegram
+        await self.tg.api.delete_messages(
+            chat_id=muc.legacy_id, message_ids=[legacy_msg_id], revoke=True
+        )
+
 
 log = logging.getLogger(__name__)
