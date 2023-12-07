@@ -21,6 +21,10 @@ xeps:
         possible from slidge.
     number: 45
     status: partial
+-   note: Telegram contacts have avatars, and the user's XMPP avatar is used to set
+        their Telegram avatar.
+    number: 84
+    status: complete
 -   note: All chat states have a telegram equivalent, including active/inactive
     number: 85
     status: complete
@@ -55,7 +59,5 @@ xeps:
 -   note: null
     number: 461
     status: complete
--   note: You cannot moderate messages from slidge yet, but deleted messages in groups
-        will appear moderated on the XMPP side.
-    number: 425
-    status: partial
+-   number: 425
+    status: complete

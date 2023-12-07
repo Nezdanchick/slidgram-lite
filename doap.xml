@@ -53,6 +53,13 @@
         </implements>
         <implements>
             <xmpp:SupportedXep>
+                <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0084.html" />
+                <xmpp:status>complete</xmpp:status>
+                 <xmpp:note>Telegram contacts have avatars, and the user's XMPP avatar is used to set their Telegram avatar.</xmpp:note>
+            </xmpp:SupportedXep>
+        </implements>
+        <implements>
+            <xmpp:SupportedXep>
                 <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0085.html" />
                 <xmpp:status>complete</xmpp:status>
                  <xmpp:note>All chat states have a telegram equivalent, including active/inactive</xmpp:note>
@@ -124,8 +131,8 @@
         <implements>
             <xmpp:SupportedXep>
                 <xmpp:xep rdf:resource="https://xmpp.org/extensions/xep-0425.html" />
-                <xmpp:status>partial</xmpp:status>
-                 <xmpp:note>You cannot moderate messages from slidge yet, but deleted messages in groups will appear moderated on the XMPP side.</xmpp:note>
+                <xmpp:status>complete</xmpp:status>
+
             </xmpp:SupportedXep>
         </implements>
 
