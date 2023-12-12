@@ -264,6 +264,9 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
                 part.role = "none"
                 part.affiliation = "outcast"
                 part.offline()
+            elif isinstance(status, tgapi.ChatMemberStatusMember):
+                part.role = "participant"
+                part.affiliation = "member"
             elif read_only:
                 part.affiliation = "member"
                 part.role = "visitor"
