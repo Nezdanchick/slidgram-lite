@@ -121,18 +121,45 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
                 self.__fetch_avatar(best)
             )
 
-    async def update_info(self):
+    async def get_group(self) -> Union[tgapi.BasicGroup, tgapi.Supergroup]:
         tg = self.session.tg
         chat = await tg.get_chat(self.legacy_id)
-        group: Union[tgapi.Supergroup, tgapi.BasicGroup]
-        info: Union[tgapi.SupergroupFullInfo, tgapi.BasicGroupFullInfo]
+
         if isinstance(chat.type_, tgapi.ChatTypeBasicGroup):
-            group = await tg.get_basic_group(chat.type_.basic_group_id)
-            info = await tg.get_basic_group_full_info(group.id)
-            self.type = MucType.GROUP
+            return await tg.get_basic_group(chat.type_.basic_group_id)
         elif isinstance(chat.type_, tgapi.ChatTypeSupergroup):
-            group = await tg.get_supergroup(chat.type_.supergroup_id)
-            info = await tg.get_supergroup_full_info(group.id)
+            return await tg.get_supergroup(chat.type_.supergroup_id)
+        else:
+            raise XMPPError(
+                "bad-request", f"This is not a telegram group: {chat.type_}"
+            )
+
+    async def get_info(
+        self,
+    ) -> Union[tgapi.BasicGroupFullInfo, tgapi.SupergroupFullInfo]:
+        tg = self.session.tg
+        group = await self.get_group()
+
+        if isinstance(group, tgapi.BasicGroup):
+            return await tg.get_basic_group_full_info(group.id)
+        elif isinstance(group, tgapi.Supergroup):
+            return await tg.get_supergroup_full_info(group.id)
+        else:
+            raise XMPPError("internal-server-error")
+
+    async def update_info(
+        self,
+        info: Optional[
+            Union[tgapi.BasicGroupFullInfo, tgapi.SupergroupFullInfo]
+        ] = None,
+    ):
+        chat = await self.session.tg.get_chat(self.legacy_id)
+        group = await self.get_group()
+        info = await self.get_info()
+
+        if isinstance(group, tgapi.BasicGroup):
+            self.type = MucType.GROUP
+        elif isinstance(group, tgapi.Supergroup):
             if info.can_get_members:
                 self.type = MucType.CHANNEL_NON_ANONYMOUS
             else:
@@ -147,6 +174,7 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
         if getattr(chat.type_, "is_channel", False):
             name += " (channel)"
         self.name = self.description = name
+        await self.fill_participants(info)
 
     async def update_subject_from_msg(self, msg: Optional[tgapi.Message] = None):
         if msg is None:
@@ -179,7 +207,12 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
         if isinstance(content, tgapi.MessageText):
             self.subject = formatted_text_to_xep_0393(content.text)
 
-    async def fill_participants(self):
+    async def fill_participants(
+        self,
+        info: Optional[
+            Union[tgapi.BasicGroupFullInfo, tgapi.SupergroupFullInfo]
+        ] = None,
+    ):
         self.log.debug("Getting participants")
         chat = await self.session.tg.get_chat(chat_id=self.legacy_id)
         if not isinstance(
@@ -187,7 +220,8 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
         ):
             raise XMPPError("item-not-found", text="This is not a valid group ID")
 
-        info = await self.session.tg.get_chat_info(chat, full=True)
+        if info is None:
+            info = await self.session.tg.get_chat_info(chat, full=True)
         if isinstance(info, tgapi.BasicGroupFullInfo):
             members = info.members
             read_only = False
