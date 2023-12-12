@@ -66,7 +66,7 @@ class AvailableEmojisMixin:
             if chat.last_message is None:
                 return _DEFAULT_REACTIONS
             legacy_msg_id = chat.last_message.id
-
+        await self.session.wait_for_ready()
         available = await self.session.tg.api.get_message_available_reactions(
             chat_id=self.chat_id, message_id=legacy_msg_id, row_size=25
         )

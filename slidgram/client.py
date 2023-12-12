@@ -134,6 +134,8 @@ class TelegramClient(aiotdlib.Client):
             raise Unauthorized(e)
         except tgapi.NotFound as e:
             raise NotFound(e)
+        except RuntimeError as e:
+            raise XMPPError("internal-server-error", str(e))
 
     async def dispatch_update(self, _self, update: tgapi.Update):
         if update.ID == "ok":
