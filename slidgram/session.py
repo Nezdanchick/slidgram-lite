@@ -17,7 +17,7 @@ from . import config
 from .client import TelegramClient
 from .contact import Contact
 from .gateway import Gateway
-from .group import MUC
+from .group import MUC, Bookmarks
 from .text_entities import to_formatted_text
 
 
@@ -45,6 +45,7 @@ Recipient = Union[Contact, MUC]
 
 class Session(BaseSession[int, Recipient]):
     xmpp: Gateway
+    bookmarks: Bookmarks
 
     def __init__(self, user):
         super().__init__(user)

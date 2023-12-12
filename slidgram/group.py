@@ -37,10 +37,20 @@ class Bookmarks(LegacyBookmarks[int, "MUC"]):
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
         self.__fill_task: Optional[asyncio.Task] = None
+        self.group_ids = dict[int, int]()
 
     @staticmethod
     async def legacy_id_to_jid_local_part(legacy_id: int):
         return "group" + str(legacy_id)
+
+    async def by_legacy_id(self, legacy_id: int) -> "MUC":
+        muc: MUC = await super().by_legacy_id(legacy_id)
+        group = await muc.get_group()
+        self.group_ids[group.id] = legacy_id
+        return muc
+
+    async def by_group_id(self, group_id: int):
+        return await self.by_legacy_id(self.group_ids[group_id])
 
     async def jid_local_part_to_legacy_id(self, local_part: str):
         try:
