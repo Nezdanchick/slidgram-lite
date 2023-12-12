@@ -2,12 +2,13 @@ import asyncio
 import mimetypes
 import tempfile
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Optional, Union
 
 import aiotdlib.api as tgapi
 from slidge import LegacyBookmarks, LegacyMUC, LegacyParticipant, MucType
 from slixmpp.exceptions import XMPPError
+from slixmpp.types import MucAffiliation
 
 from . import config
 from .text_entities import formatted_text_to_xep_0393
@@ -352,6 +353,63 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
             response = await self.session.tg.api.set_chat_photo(self.legacy_id, None)
         self.log.debug("Set room avatar response: %s", response)
         return None
+
+    async def on_set_affiliation(
+        self,
+        contact: "Contact",
+        affiliation: MucAffiliation,
+        reason: Optional[str],
+        nickname: Optional[str],
+    ):
+        tg = self.session.tg.api
+
+        try:
+            member = await tg.get_chat_member(
+                self.legacy_id, tgapi.MessageSenderUser(user_id=contact.legacy_id)
+            )
+        except tgapi.NotFound:
+            if affiliation == "none":
+                return
+            await tg.add_chat_member(
+                self.legacy_id,
+                contact.legacy_id,
+                forward_limit=0 if affiliation == "outcast" else 100,
+            )
+            member = await tg.get_chat_member(self.legacy_id, contact.legacy_id)
+
+        await tg.set_chat_member_status(
+            self.legacy_id,
+            member.member_id,
+            status=AFFILIATIONS[affiliation],
+        )
+
+
+AFFILIATIONS = {
+    "admin": tgapi.ChatMemberStatusAdministrator(
+        rights=tgapi.ChatAdministratorRights(
+            can_manage_chat=True,
+            can_change_info=True,
+            can_post_messages=True,
+            can_edit_messages=True,
+            can_delete_messages=True,
+            can_invite_users=True,
+            can_restrict_members=True,
+            can_pin_messages=True,
+            can_manage_topics=True,
+            can_promote_members=True,
+            can_manage_video_chats=True,
+            is_anonymous=False,
+        )
+    ),
+    "outcast": tgapi.ChatMemberStatusBanned(
+        banned_until_date=(datetime.utcnow() + timedelta(days=1000)).timestamp()
+    ),
+    "owner": tgapi.ChatMemberStatusCreator(
+        custom_title="", is_anonymous=False, is_member=True
+    ),
+    "member": tgapi.ChatMemberStatusMember(),
+    "none": tgapi.ChatMemberStatusLeft(),
+}
 
 
 class Participant(LegacyParticipant, TelegramToXMPPMixin):
