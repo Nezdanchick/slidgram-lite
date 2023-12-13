@@ -89,6 +89,7 @@ class TelegramClient(aiotdlib.Client):
         self.contacts = session.contacts
         self.bookmarks = session.bookmarks
         self.log = self.session.log
+        self.active_emojis = asyncio.Future[list[str]]()
 
         async def input_(prompt):
             self.session.send_gateway_status(f"Action required: {prompt}")
@@ -420,6 +421,13 @@ class TelegramClient(aiotdlib.Client):
         group = await self.get_basic_group(update.basic_group_id)
         muc: MUC = await self.session.bookmarks.by_group_id(group.id)
         await muc.update_info(info)
+
+    async def handle_ActiveEmojiReactions(
+        self, update: tgapi.UpdateActiveEmojiReactions
+    ):
+        if self.active_emojis.done():
+            self.active_emojis = asyncio.Future[list[str]]()
+        self.active_emojis.set_result(update.emojis)
 
     async def is_private_chat(self, chat_id: int):
         chat = await self.get_chat(chat_id)
