@@ -309,14 +309,19 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
         if m is None:
             return []
 
-        messages = [chat.last_message]
+        messages = (
+            [chat.last_message]
+            if isinstance(chat.last_message.content, BACKFILLABLE)
+            else []
+        )
         try:
             async for m in tg.iter_chat_history(
                 self.legacy_id,
                 limit=n,
                 from_message_id=before or 0,  # 0="None" for tdlib in this context
             ):
-                messages.append(m)
+                if isinstance(m, BACKFILLABLE):
+                    messages.append(m)
         except XMPPError as e:
             self.log.warning(
                 "Problem fetching history: %s, we could only fetch %s message(s).",
@@ -425,3 +430,16 @@ class Participant(LegacyParticipant, TelegramToXMPPMixin):
         if self.is_user:
             return 0
         return self.contact.legacy_id
+
+
+BACKFILLABLE = (
+    tgapi.MessageAnimatedEmoji,
+    tgapi.MessageAnimation,
+    tgapi.MessageAudio,
+    tgapi.MessagePhoto,
+    tgapi.MessageSticker,
+    tgapi.MessageText,
+    tgapi.MessageVideo,
+    tgapi.MessageVideoNote,
+    tgapi.MessageVoiceNote,
+)
