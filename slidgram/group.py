@@ -258,12 +258,17 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
         else:
             raise RuntimeError
         self.log.debug("%s participants", len(members))
+
+        old = set(c.legacy_id for c in self._participants_by_contacts.keys())
+        self.log.debug("Old participants: %s", old)
         for member in members:
             sender = member.member_id
             if not isinstance(sender, tgapi.MessageSenderUser):
                 self.log.debug("Ignoring non-user sender")  # Does this happen?
                 continue
             part = await self.participant_by_sender_id(sender)
+            if part.contact:
+                old.discard(part.contact.legacy_id)
             status = member.status
             if isinstance(status, tgapi.ChatMemberStatusCreator):
                 part.role = "moderator"
@@ -281,6 +286,10 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
             elif read_only:
                 part.affiliation = "member"
                 part.role = "visitor"
+        for tg_id in old:
+            self.log.debug("Removing %s", tg_id)
+            part = await self.get_participant_by_legacy_id(tg_id)
+            self.remove_participant(part)
 
     async def send_text(self, text: str) -> int:
         result = await self.session.tg.send_text(self.legacy_id, text)
