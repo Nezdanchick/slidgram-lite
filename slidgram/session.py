@@ -316,11 +316,13 @@ class Session(BaseSession[int, Recipient]):
             chat_id=muc.legacy_id, message_ids=[legacy_msg_id], revoke=True
         )
 
-    async def on_create_group(self, name: str, contacts: list[Contact]) -> int:
+    async def on_create_group(
+        self, name: str, contacts: list[Contact]  # type:ignore
+    ):
         chat = await self.tg.api.create_new_basic_group_chat(
             name, [c.legacy_id for c in contacts]
         )
-        return chat.id
+        return chat.id  # type:ignore
 
 
 log = logging.getLogger(__name__)

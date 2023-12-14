@@ -370,7 +370,7 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
 
     async def on_set_affiliation(
         self,
-        contact: "Contact",
+        contact: "Contact",  # type:ignore
         affiliation: MucAffiliation,
         reason: Optional[str],
         nickname: Optional[str],
