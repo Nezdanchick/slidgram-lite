@@ -67,9 +67,17 @@ class AvailableEmojisMixin:
                 return await self.session.tg.active_emojis
             legacy_msg_id = chat.last_message.id
         await self.session.wait_for_ready()
-        available = await self.session.tg.api.get_message_available_reactions(
-            chat_id=self.chat_id, message_id=legacy_msg_id, row_size=25
-        )
+        try:
+            available = await self.session.tg.api.get_message_available_reactions(
+                chat_id=self.chat_id, message_id=legacy_msg_id, row_size=25
+            )
+        except XMPPError:
+            self.session.log.warning(
+                "Could not fetch chat-specific available emoji reactions, "
+                "using the default 'active emojis' list.",
+                stack_info=True,
+            )
+            return await self.session.tg.active_emojis
         return {
             a.type_.emoji
             for a in available.top_reactions
