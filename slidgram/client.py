@@ -121,8 +121,10 @@ class TelegramClient(aiotdlib.Client):
         query: BaseObject,
         *,
         request_id: str = None,  # type:ignore
-        request_timeout: int = 60,
+        request_timeout: Optional[int] = None,
     ) -> Optional[RequestResult]:
+        if request_timeout is None:
+            request_timeout = config.TDLIB_TIMEOUT
         try:
             return await super().request(  # type:ignore
                 query, request_id=request_id, request_timeout=request_timeout

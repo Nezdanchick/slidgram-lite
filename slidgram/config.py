@@ -53,3 +53,9 @@ BIG_AVATARS__DOC = (
     "Fetch contact avatars in high-resolution (640x640) instead of the "
     "default 160x160. NB: slidge core main config AVATAR_SIZE still applies."
 )
+
+TDLIB_TIMEOUT = 120
+TDLIB_TIMEOUT__DOC = (
+    "Timeout for telegram requests. If you get crashed related to timeout "
+    "errors, you might want to increase that."
+)
