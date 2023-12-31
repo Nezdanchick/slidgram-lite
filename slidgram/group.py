@@ -184,7 +184,8 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
         name = chat.title
         if getattr(chat.type_, "is_channel", False):
             name += " (channel)"
-        self.name = self.description = name
+        self.name = name
+        self.description = info.description
         await self.fill_participants(info)
 
     async def update_subject_from_msg(self, msg: Optional[tgapi.Message] = None):
@@ -395,6 +396,16 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
             self.legacy_id,
             member.member_id,
             status=AFFILIATIONS[affiliation],
+        )
+
+    async def on_set_config(
+        self,
+        name: Optional[str],
+        description: Optional[str],
+    ):
+        await self.session.tg.api.set_chat_title(self.chat_id, title=name or "")
+        await self.session.tg.api.set_chat_description(
+            self.chat_id, description=description or ""
         )
 
 
