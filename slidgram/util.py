@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Optional
 
 import aiotdlib.api as tgapi
 from slidge.core.mixins.message import ContentMessageMixin
-from slidge.util.types import MessageReference
+from slidge.util.types import LinkPreview, MessageReference
 from slixmpp.exceptions import XMPPError
 
 from . import config
@@ -154,6 +154,22 @@ class TelegramToXMPPMixin(ContentMessageMixin):
         if isinstance(content, tgapi.MessageText):
             # TODO: parse formatted text to markdown
             formatted_text = content.text
+            if web_page := content.web_page:
+                if photo := web_page.photo:
+                    await self.send_tg_file(
+                        max(photo.sizes, key=lambda x: x.width).photo
+                    )
+                kwargs["link_previews"] = [
+                    LinkPreview(
+                        about=web_page.url,
+                        url=web_page.display_url,
+                        type=web_page.type_,
+                        site_name=web_page.site_name,
+                        title=web_page.title,
+                        description=web_page.description.text,
+                        image=None,
+                    )
+                ]
             self.send_text(
                 body=formatted_text_to_xep_0393(formatted_text),
                 **kwargs,
