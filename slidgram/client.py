@@ -225,6 +225,14 @@ class TelegramClient(aiotdlib.Client):
             contact = await session.contacts.by_legacy_id(action.chat_id)
             contact.displayed(msg_id, carbon=True)
 
+    async def handle_ChatTitle(self, update: tgapi.UpdateChatTitle):
+        if await self.is_private_chat(update.chat_id):
+            muc_or_contact = await self.session.contacts.by_legacy_id(update.chat_id)
+        else:
+            muc_or_contact = await self.session.bookmarks.by_legacy_id(update.chat_id)
+
+        muc_or_contact.name = update.title
+
     async def __get_contact_or_participant(self, msg: tgapi.Message):
         session = self.session
         chat_id = msg.chat_id
