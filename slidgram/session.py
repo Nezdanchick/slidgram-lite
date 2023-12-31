@@ -80,15 +80,13 @@ class Session(BaseSession[int, Recipient]):
         return await fut
 
     @catch_chat_not_found
-    async def send_text(
+    async def on_text(
         self,
         chat: Recipient,
         text: str,
         *,
         reply_to_msg_id=None,
-        reply_to_fallback_text=None,
-        reply_to=None,
-        **kwargs,
+        **_kwargs,
     ) -> int:
         result = await self.tg.send_formatted_text(
             text=to_formatted_text(text),
@@ -100,7 +98,7 @@ class Session(BaseSession[int, Recipient]):
         return new_message_id
 
     @catch_chat_not_found
-    async def send_file(
+    async def on_file(
         self, chat: Recipient, url: str, http_response, reply_to_msg_id=None, **_
     ) -> int:
         type_, _subtype = http_response.content_type.split("/")
@@ -127,17 +125,17 @@ class Session(BaseSession[int, Recipient]):
         return new_message_id
 
     @catch_chat_not_found
-    async def active(self, c: Recipient, thread=None):
+    async def on_active(self, c: Recipient, thread=None):
         res = await self.tg.api.open_chat(chat_id=c.legacy_id)
         self.log.debug("Open chat res: %s", res)
 
     @catch_chat_not_found
-    async def inactive(self, c: Recipient, thread=None):
+    async def on_inactive(self, c: Recipient, thread=None):
         res = await self.tg.api.close_chat(chat_id=c.legacy_id)
         self.log.debug("Close chat res: %s", res)
 
     @catch_chat_not_found
-    async def composing(self, c: Recipient, thread=None):
+    async def on_composing(self, c: Recipient, thread=None):
         res = await self.tg.api.send_chat_action(
             chat_id=c.legacy_id,
             action=tgapi.ChatActionTyping(),  # type:ignore
@@ -146,7 +144,7 @@ class Session(BaseSession[int, Recipient]):
         self.log.debug("Send composing res: %s", res)
 
     @catch_chat_not_found
-    async def paused(self, c: Recipient, thread=None):
+    async def on_paused(self, c: Recipient, thread=None):
         res = await self.tg.api.send_chat_action(
             chat_id=c.legacy_id,
             action=tgapi.ChatActionCancel(),  # type:ignore
@@ -155,7 +153,7 @@ class Session(BaseSession[int, Recipient]):
         self.log.debug("Send composing res: %s", res)
 
     @catch_chat_not_found
-    async def displayed(self, c: Recipient, tg_id: int, thread=None):
+    async def on_displayed(self, c: Recipient, tg_id: int, thread=None):
         res = await self.tg.api.view_messages(
             chat_id=c.legacy_id,
             message_ids=[tg_id],
@@ -164,7 +162,9 @@ class Session(BaseSession[int, Recipient]):
         self.log.debug("Send chat action res: %s", res)
 
     @catch_chat_not_found
-    async def correct(self, c: Recipient, text: str, legacy_msg_id: int, thread=None):
+    async def on_correct(
+        self, c: Recipient, text: str, legacy_msg_id: int, thread=None
+    ):
         f = self.user_correction_futures[legacy_msg_id] = self.xmpp.loop.create_future()
         await self.tg.api.edit_message_text(
             chat_id=c.legacy_id,
@@ -177,7 +177,7 @@ class Session(BaseSession[int, Recipient]):
         )
         await f
 
-    async def search(self, form_values: dict[str, str]):
+    async def on_search(self, form_values: dict[str, str]):
         phone = form_values["phone"]
         first = form_values.get("first", phone)
         last = form_values.get("last", "")
@@ -232,7 +232,7 @@ class Session(BaseSession[int, Recipient]):
             self.log.debug("Remove reaction response: %s", r)
 
     @catch_chat_not_found
-    async def react(
+    async def on_react(
         self, c: Recipient, legacy_msg_id: int, emojis: list[str], thread=None
     ):
         if len(emojis) == 0:
@@ -253,7 +253,7 @@ class Session(BaseSession[int, Recipient]):
             self.log.debug("Message reaction response: %s", r)
 
     @catch_chat_not_found
-    async def retract(self, c: Recipient, legacy_msg_id, thread=None):
+    async def on_retract(self, c: Recipient, legacy_msg_id, thread=None):
         f = self.delete_futures[legacy_msg_id] = self.xmpp.loop.create_future()
         r = await self.tg.api.delete_messages(c.legacy_id, [legacy_msg_id], revoke=True)
         self.log.debug("Delete message response: %s", r)
