@@ -408,6 +408,9 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
             self.chat_id, description=description or ""
         )
 
+    async def on_destroy_request(self, reason: Optional[str]):
+        await self.session.tg.api.delete_chat(self.legacy_id)
+
 
 AFFILIATIONS = {
     "admin": tgapi.ChatMemberStatusAdministrator(
