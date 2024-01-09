@@ -160,7 +160,8 @@ class TelegramToXMPPMixin(ContentMessageMixin):
             if web_page := content.web_page:
                 if photo := web_page.photo:
                     await self.send_tg_file(
-                        max(photo.sizes, key=lambda x: x.width).photo
+                        max(photo.sizes, key=lambda x: x.width).photo,
+                        **kwargs | {"legacy_msg_id": f"preview-{msg.id}"},
                     )
                 kwargs["link_previews"] = [
                     LinkPreview(
