@@ -189,10 +189,10 @@ class TelegramToXMPPMixin(ContentMessageMixin):
             else:
                 await self.send_tg_file(sticker.sticker, **kwargs)
         elif best_file := get_best_file(content):
-            assert hasattr(content, "caption")
+            caption = getattr(content, "caption", None)
             await self.send_tg_file(
                 best_file,
-                formatted_text_to_xep_0393(content.caption),
+                formatted_text_to_xep_0393(caption) if caption else None,
                 get_file_name(content),
                 **kwargs,
             )
