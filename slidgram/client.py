@@ -1,7 +1,8 @@
 import asyncio
 import functools
+from collections import defaultdict
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Optional, Union, cast
 
 import aiotdlib
 from aiotdlib import api as tgapi
@@ -12,6 +13,7 @@ from slixmpp.exceptions import XMPPError
 
 from . import config
 from .group import MUC, NotAMember, Participant
+from .util import EMOJIS_VOTE, user_has_voted
 
 if TYPE_CHECKING:
     from .contact import Contact
@@ -248,6 +250,10 @@ class TelegramClient(aiotdlib.Client):
             # Happens when the user send a picture, looks safe to ignore
             self.log.debug("Ignoring message photo update")
             return
+
+        if isinstance(new_content, tgapi.MessagePoll):
+            return await self.update_poll_votes(action)
+
         if not isinstance(new_content, tgapi.MessageText):
             self.log.warning("Ignoring message update: %s", new_content)
             return
@@ -272,6 +278,55 @@ class TelegramClient(aiotdlib.Client):
             return
         sender = await self.__get_contact_or_participant(msg)
         await sender.send_tg_message(msg, correction=True)
+
+    async def get_poll_voters(self, chat_id: int, message_id: int, choice_id: int):
+        offset = 0
+        voters = list[tgapi.MessageSender]()
+        while True:
+            batch = (
+                await self.api.get_poll_voters(
+                    chat_id, message_id, choice_id, offset, 50
+                )
+            ).senders
+            self.log.debug("batch: %s", batch)
+            self.log.debug("voters: %s", voters)
+            if not batch:
+                break
+            voters.extend(batch)
+            offset += len(batch)
+        return voters
+
+    async def update_poll_votes(self, action: tgapi.UpdateMessageContent):
+        new_content = cast(tgapi.MessagePoll, action.new_content)
+        poll_id = f"poll-{action.message_id}"
+        muc = await self.session.bookmarks.by_legacy_id(action.chat_id)
+        voters = defaultdict[Participant, list[str]](list)
+
+        try:
+            msg = await self.api.get_message(action.chat_id, action.message_id)
+        except NotFound:
+            self.log.debug("Ignoring update of message that cannot be found anymore.")
+        else:
+            sender = await self.__get_contact_or_participant(msg)
+            await sender.send_tg_message(msg, correction=True)
+
+        # we only votes if we have voted ourselves
+        if not new_content.poll.is_anonymous and user_has_voted(new_content.poll):
+            try:
+                for i, (_o, emoji) in enumerate(
+                    zip(new_content.poll.options, EMOJIS_VOTE)
+                ):
+                    for voter in await self.get_poll_voters(
+                        action.chat_id, action.message_id, i
+                    ):
+                        if not isinstance(voter, tgapi.MessageSenderUser):
+                            continue
+                        part: Participant = await muc.participant_by_sender_id(voter)
+                        voters[part].append(emoji)
+                for part, emojis in voters.items():
+                    part.react(poll_id, emojis)
+            except XMPPError as e:
+                self.log.debug("Could not fetch who voted: %r", e)
 
     async def handle_User(self, action: tgapi.UpdateUser):
         u = action.user

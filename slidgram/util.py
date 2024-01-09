@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Optional
 import aiotdlib.api as tgapi
 from slidge.core.mixins.message import ContentMessageMixin
 from slidge.util.types import LinkPreview, MessageReference
+from slidge.util.util import remove_emoji_variation_selector_16
 from slixmpp.exceptions import XMPPError
 
 from . import config
@@ -66,6 +67,8 @@ class AvailableEmojisMixin:
             if chat.last_message is None:
                 return await self.session.tg.active_emojis
             legacy_msg_id = chat.last_message.id
+        elif str(legacy_msg_id).startswith(self.session.SPECIAL_MSG_ID_PREFIX):
+            return EMOJIS_VOTE
         await self.session.wait_for_ready()
         try:
             available = await self.session.tg.api.get_message_available_reactions(
@@ -229,6 +232,28 @@ class TelegramToXMPPMixin(ContentMessageMixin):
         elif isinstance(content, tgapi.MessageChatDeletePhoto):
             self.send_text("/me deleted the chat photo")
             self.muc.update_tg_photo(None)
+        elif isinstance(content, tgapi.MessagePoll):
+            if not kwargs.get("correction"):
+                self.send_text(
+                    body=f"/me started a poll with the question '{content.poll.question}'",
+                    **kwargs,
+                )
+            if user_has_voted(content.poll):
+                choices = [
+                    (
+                        f"{e} {o.text} ({o.voter_count} vote{'s' if o.voter_count != 1 else ''})"
+                        + ("*" if o.is_chosen else "")
+                    )
+                    for e, o in zip(EMOJIS_VOTE, content.poll.options)
+                ]
+            else:
+                choices = [
+                    f"{e} {o.text}" for e, o in zip(EMOJIS_VOTE, content.poll.options)
+                ]
+            self.send_text(
+                "\n".join(choices) + f"\nTotal votes: {content.poll.total_voter_count}",
+                **kwargs | {"legacy_msg_id": f"poll-{msg.id}"},
+            )
         else:
             self.send_text(
                 f"/me tried to send an unsupported content: {type(content)}.",
@@ -283,3 +308,52 @@ class TelegramToXMPPMixin(ContentMessageMixin):
             legacy_file_id=str(best_file.remote.unique_id),
             **kwargs,
         )
+
+
+def user_has_voted(poll: tgapi.Poll):
+    return any(
+        # we can only get individual votes if we have voter ourselves
+        o.is_chosen or o.is_being_chosen
+        for o in poll.options
+    )
+
+
+EMOJIS_VOTE = [
+    "1️⃣️",
+    "2️⃣️",
+    "3️⃣️",
+    "4️⃣️",
+    "5️⃣️",
+    "6️⃣️",
+    "7️⃣️",
+    "8️⃣️",
+    "9️⃣️",
+    "🇦",
+    "🇧",
+    "🇨",
+    "🇩",
+    "🇪",
+    "🇫",
+    "🇬",
+    "🇭",
+    "🇮",
+    "🇯",
+    "🇰",
+    "🇱",
+    "🇲",
+    "🇳",
+    "🇴",
+    "🇵",
+    "🇶",
+    "🇷",
+    "🇸",
+    "🇹",
+    "🇺",
+    "🇻",
+    "🇼",
+    "🇽",
+    "🇾",
+    "🇿",
+]
+
+EMOJIS_VOTE_NO_SELECTOR = [remove_emoji_variation_selector_16(x) for x in EMOJIS_VOTE]

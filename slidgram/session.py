@@ -19,6 +19,7 @@ from .contact import Contact
 from .gateway import Gateway
 from .group import MUC, Bookmarks
 from .text_entities import to_formatted_text
+from .util import EMOJIS_VOTE_NO_SELECTOR
 
 
 def catch_chat_not_found(coroutine):
@@ -46,6 +47,8 @@ Recipient = Union[Contact, MUC]
 class Session(BaseSession[int, Recipient]):
     xmpp: Gateway
     bookmarks: Bookmarks
+
+    SPECIAL_MSG_ID_PREFIX = "poll-"
 
     def __init__(self, user):
         super().__init__(user)
@@ -235,6 +238,16 @@ class Session(BaseSession[int, Recipient]):
     async def on_react(
         self, c: Recipient, legacy_msg_id: int, emojis: list[str], thread=None
     ):
+        if str(legacy_msg_id).startswith(self.SPECIAL_MSG_ID_PREFIX):
+            if any(e not in EMOJIS_VOTE_NO_SELECTOR for e in emojis):
+                raise XMPPError("bad-request", "You can't vote with these emojis")
+            await self.tg.api.set_poll_answer(
+                c.legacy_id,
+                str(legacy_msg_id).removeprefix(self.SPECIAL_MSG_ID_PREFIX),
+                option_ids=[EMOJIS_VOTE_NO_SELECTOR.index(e) for e in emojis],
+            )
+            return
+
         if len(emojis) == 0:
             await self.remove_reactions(c, legacy_msg_id)
             return
