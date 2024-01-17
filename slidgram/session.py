@@ -5,7 +5,7 @@ import re
 import tempfile
 from io import BytesIO
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, Union, cast
 
 import aiotdlib.api as tgapi
 from aiotdlib.api.errors import BadRequest
@@ -89,10 +89,30 @@ class Session(BaseSession[int, Recipient]):
         text: str,
         *,
         reply_to_msg_id=None,
+        mentions: Optional[list] = None,
         **_kwargs,
     ) -> int:
+        formatted_text = to_formatted_text(text)
+        # This is very ugly but we need this because:
+        # 1. to_formatted_text() changes offsets
+        # 2. we need to count utf-16 core units
+        # TODO: move this logic to slidge-style-parser
+        if chat.is_group:
+            mentions = await cast(MUC, chat).parse_mentions_utf16(
+                formatted_text.text.encode("utf-16-le")
+            )
+        for mention in mentions or []:
+            formatted_text.entities.append(
+                tgapi.TextEntity(
+                    type_=tgapi.TextEntityTypeMentionName(
+                        user_id=mention.contact.legacy_id
+                    ),
+                    offset=mention.start,
+                    length=mention.end - mention.start,
+                )
+            )
         result = await self.tg.send_formatted_text(
-            text=to_formatted_text(text),
+            text=formatted_text,
             chat_id=chat.legacy_id,
             reply_to_message_id=reply_to_msg_id,
         )

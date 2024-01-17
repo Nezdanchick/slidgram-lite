@@ -98,10 +98,10 @@ class Contact(TelegramToXMPPMixin, AvailableEmojisMixin, LegacyContact[int]):
         if user is None:
             user = await self.get_telegram_user()
 
-        full_name = " ".join([user.first_name, user.last_name])
+        full_name = " ".join([user.first_name, user.last_name]).strip()
         if usernames := user.usernames:
             self.name = usernames.editable_username
-        elif full_name.strip():
+        elif full_name:
             # it might just be a whitespace at this stage, so we don't set it,
             # the participant ID will be displayed
             self.name = full_name

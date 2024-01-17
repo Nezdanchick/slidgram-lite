@@ -1,5 +1,6 @@
 import asyncio
 import mimetypes
+import re
 import tempfile
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
@@ -7,6 +8,7 @@ from typing import TYPE_CHECKING, Optional, Union
 
 import aiotdlib.api as tgapi
 from slidge import LegacyBookmarks, LegacyMUC, LegacyParticipant, MucType
+from slidge.util.types import Mention
 from slixmpp.exceptions import XMPPError
 from slixmpp.types import MucAffiliation
 
@@ -410,6 +412,30 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
 
     async def on_destroy_request(self, reason: Optional[str]):
         await self.session.tg.api.delete_chat(self.legacy_id)
+
+    async def parse_mentions_utf16(self, text: bytes) -> list[Mention]:
+        # TODO: move this logic to slidge-style-parser
+        if len(self._participants_by_nicknames) == 0:
+            return []
+
+        result = []
+        pattern = "|".encode("utf-8").join(
+            re.escape(nick.encode("utf-16-le"))
+            for nick in self._participants_by_nicknames
+        )
+        self.log.debug("text: %s", text)
+        self.log.debug("pattern: %s", pattern)
+        for match in re.finditer(pattern, text):
+            self.log.debug("match: %s", match)
+            self.log.debug("group: %s", match.group())
+            span = match.span()
+            nick = match.group().decode("utf-16-le")
+            participant = self._participants_by_nicknames[nick]
+            if contact := participant.contact:
+                result.append(
+                    Mention(contact=contact, start=span[0] // 2, end=span[1] // 2)
+                )
+        return result
 
 
 AFFILIATIONS = {
