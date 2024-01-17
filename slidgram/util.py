@@ -130,7 +130,9 @@ class TelegramToXMPPMixin(ContentMessageMixin):
             raise RuntimeError("This should not happen")
 
         if isinstance(reply_to_content, tgapi.MessageText):
-            slidge_reference.body = formatted_text_to_xep_0393(reply_to_content.text)
+            slidge_reference.body = await self.formatted_text_to_xep_0393(
+                reply_to_content.text
+            )
         elif isinstance(reply_to_content, tgapi.MessageAnimatedEmoji):
             slidge_reference.body = reply_to_content.animated_emoji.sticker.emoji
         elif isinstance(reply_to_content, tgapi.MessageSticker):
@@ -175,7 +177,7 @@ class TelegramToXMPPMixin(ContentMessageMixin):
                     )
                 ]
             self.send_text(
-                body=formatted_text_to_xep_0393(formatted_text),
+                body=await self.formatted_text_to_xep_0393(formatted_text),
                 **kwargs,
             )
         elif isinstance(content, tgapi.MessageContactRegistered):
@@ -193,7 +195,7 @@ class TelegramToXMPPMixin(ContentMessageMixin):
             caption = getattr(content, "caption", None)
             await self.send_tg_file(
                 best_file,
-                formatted_text_to_xep_0393(caption) if caption else None,
+                await self.formatted_text_to_xep_0393(caption) if caption else None,
                 get_file_name(content),
                 **kwargs,
             )
@@ -309,6 +311,14 @@ class TelegramToXMPPMixin(ContentMessageMixin):
             legacy_file_id=str(best_file.remote.unique_id),
             **kwargs,
         )
+
+    async def formatted_text_to_xep_0393(self, t: tgapi.FormattedText):
+        if hasattr(self, "muc"):
+            return formatted_text_to_xep_0393(
+                t, await self.session.tg.get_my_id(), self.muc.user_nick
+            )
+        else:
+            return formatted_text_to_xep_0393(t)
 
 
 def user_has_voted(poll: tgapi.Poll):

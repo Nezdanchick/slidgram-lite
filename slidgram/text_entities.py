@@ -32,8 +32,12 @@ class Style:
         return tgapi.TextEntity(type_=type_, offset=self.offset, length=self.length)
 
 
-def formatted_text_to_xep_0393(t: tgapi.FormattedText):
-    return entities_to_xep_0393(t.text, t.entities)
+def formatted_text_to_xep_0393(
+    t: tgapi.FormattedText,
+    user_id: Optional[int] = None,
+    user_nick: Optional[str] = None,
+):
+    return entities_to_xep_0393(t.text, t.entities, user_id, user_nick)
 
 
 def to_formatted_text(t: str) -> tgapi.FormattedText:
@@ -44,7 +48,12 @@ def to_formatted_text(t: str) -> tgapi.FormattedText:
     )
 
 
-def to_xep_0393(t: bytes, entity: Optional[tgapi.TextEntity] = None):
+def to_xep_0393(
+    t: bytes,
+    entity: Optional[tgapi.TextEntity] = None,
+    user_id: Optional[int] = None,
+    user_nick: Optional[str] = None,
+):
     if not entity:
         return t
 
@@ -60,6 +69,13 @@ def to_xep_0393(t: bytes, entity: Optional[tgapi.TextEntity] = None):
 
     if type_ is tgapi.TextEntityTypeTextUrl:
         return t + f"<{entity.type_.url}>".encode("utf-16-le")
+
+    if (
+        type_ is tgapi.TextEntityTypeMentionName
+        and entity.type_.user_id == user_id
+        and user_nick
+    ):
+        return user_nick.encode("utf-16-le")
 
     return t
 
@@ -85,7 +101,12 @@ def merge_consecutive_entities(entities: list[tgapi.TextEntity]):
     return result
 
 
-def entities_to_xep_0393(text: str, entities: list[tgapi.TextEntity]):
+def entities_to_xep_0393(
+    text: str,
+    entities: list[tgapi.TextEntity],
+    user_id: Optional[int] = None,
+    user_nick: Optional[str] = None,
+):
     if not entities:
         return text
 
@@ -104,12 +125,17 @@ def entities_to_xep_0393(text: str, entities: list[tgapi.TextEntity]):
     for e in entities:
         e.offset *= 2
         e.length *= 2
-    res_utf16 = entities_to_xep_0393_utf_16(text_utf16, entities)
+    res_utf16 = entities_to_xep_0393_utf_16(text_utf16, entities, user_id, user_nick)
 
     return res_utf16.decode("utf-16-le")
 
 
-def entities_to_xep_0393_utf_16(text: bytes, entities: list[tgapi.TextEntity]):
+def entities_to_xep_0393_utf_16(
+    text: bytes,
+    entities: list[tgapi.TextEntity],
+    user_id: Optional[int] = None,
+    user_nick: Optional[str] = None,
+):
     result = b""
     index = 0
     while entities:
@@ -139,7 +165,7 @@ def entities_to_xep_0393_utf_16(text: bytes, entities: list[tgapi.TextEntity]):
 
         match = text[offset:end]
         match_md = entities_to_xep_0393_utf_16(match, inside_entities)
-        result += to_xep_0393(match_md, entity)
+        result += to_xep_0393(match_md, entity, user_id, user_nick)
         index = end
 
     after = text[index:]
