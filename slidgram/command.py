@@ -1,9 +1,10 @@
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from aiotdlib import api as tgapi
 from slidge import FormField
 from slidge.command import Command, CommandAccess, Confirmation, Form, TableResult
+from slidge.command.categories import GROUPS
 from slixmpp import JID
 
 if TYPE_CHECKING:
@@ -12,6 +13,7 @@ if TYPE_CHECKING:
 
 class SessionCommandMixin:
     INSTRUCTIONS: str = NotImplemented
+    CATEGORY: Optional[str] = "🛫 Telegram sessions"
 
     async def run(self, session, ifrom: JID, *args):
         assert session is not None
@@ -50,7 +52,7 @@ class SessionCommandMixin:
 
 
 class ListSessions(SessionCommandMixin, Command):
-    NAME = "List telegram sessions"
+    NAME = "📋 List telegram sessions"
     NODE = CHAT_COMMAND = "tg-sessions"
     ACCESS = CommandAccess.USER_LOGGED
     INSTRUCTIONS = "Pick a session for more details"
@@ -85,7 +87,7 @@ class ListSessions(SessionCommandMixin, Command):
 
 
 class TerminateSession(SessionCommandMixin, Command):
-    NAME = "Terminate a telegram session"
+    NAME = "❌ Terminate a telegram session"
     NODE = CHAT_COMMAND = "terminate-tg-session"
     ACCESS = CommandAccess.USER_LOGGED
     INSTRUCTIONS = "Pick a session to terminate it"
@@ -113,11 +115,12 @@ class TerminateSession(SessionCommandMixin, Command):
 
 
 class JoinPublicChat(Command):
-    NAME = "Join a telegram public chat"
+    NAME = "🚪 Join a telegram public chat"
     HELP = "Join a public channel, private group or supergroup"
     NODE = CHAT_COMMAND = "join-chat"
     ACCESS = CommandAccess.USER_LOGGED
     INSTRUCTIONS = "Use a tg:// URI or a or a https://tg.me URL to join a group"
+    CATEGORY = GROUPS
 
     async def run(self, _session, _ifrom, *_args):
         return Form(
@@ -138,7 +141,7 @@ class JoinPublicChat(Command):
 
 
 class SearchPublicChats(Command):
-    NAME = "Search telegram public chats"
+    NAME = "🔎 Search telegram public chats"
     HELP = (
         "Searches public chats by looking for specified query in their "
         "username and title. Currently, only supergroups and "
@@ -147,6 +150,7 @@ class SearchPublicChats(Command):
     NODE = CHAT_COMMAND = "search-chats"
     ACCESS = CommandAccess.USER_LOGGED
     INSTRUCTIONS = "Enter search terms"
+    CATEGORY = GROUPS
 
     async def run(self, _session, _ifrom, *_args):
         return Form(
