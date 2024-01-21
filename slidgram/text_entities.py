@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from aiotdlib import api as tgapi
+from slidge.util.types import Mention
 from slidge_style_parser import format_for_telegram  # type:ignore
 
 PARSER_TO_ENTITY = {
@@ -40,12 +41,29 @@ def formatted_text_to_xep_0393(
     return entities_to_xep_0393(t.text, t.entities, user_id, user_nick)
 
 
-def to_formatted_text(t: str) -> tgapi.FormattedText:
-    text, blocks = format_for_telegram(t)
-    return tgapi.FormattedText(
-        text=text,
-        entities=[Style(*b).to_entity() for b in blocks],
+def to_formatted_text(
+    t: str, mentions: Optional[list[Mention]] = None
+) -> tgapi.FormattedText:
+    if mentions is None:
+        mentions = []
+    text, blocks = format_for_telegram(
+        t, [(m.contact.name, m.start, m.end) for m in mentions]
     )
+    entities = []
+    for block in blocks:
+        if block[0] == "mention":
+            entities.append(
+                tgapi.TextEntity(
+                    type_=tgapi.TextEntityTypeMentionName(
+                        user_id=mentions.pop(0).contact.legacy_id
+                    ),
+                    offset=block[1],
+                    length=block[2],
+                )
+            )
+        else:
+            entities.append(Style(*block).to_entity())
+    return tgapi.FormattedText(text=text, entities=entities)
 
 
 def to_xep_0393(

@@ -5,12 +5,13 @@ import re
 import tempfile
 from io import BytesIO
 from pathlib import Path
-from typing import Optional, Union, cast
+from typing import Optional, Union
 
 import aiotdlib.api as tgapi
 from aiotdlib.api.errors import BadRequest
 from PIL import Image
 from slidge import BaseSession, FormField, SearchResult
+from slidge.util.types import Mention
 from slixmpp.exceptions import XMPPError
 
 from . import config
@@ -89,30 +90,11 @@ class Session(BaseSession[int, Recipient]):
         text: str,
         *,
         reply_to_msg_id=None,
-        mentions: Optional[list] = None,
+        mentions: Optional[list[Mention]] = None,
         **_kwargs,
     ) -> int:
-        formatted_text = to_formatted_text(text)
-        # This is very ugly but we need this because:
-        # 1. to_formatted_text() changes offsets
-        # 2. we need to count utf-16 core units
-        # TODO: move this logic to slidge-style-parser
-        if chat.is_group:
-            mentions = await cast(MUC, chat).parse_mentions_utf16(
-                formatted_text.text.encode("utf-16-le")
-            )
-        for mention in mentions or []:
-            formatted_text.entities.append(
-                tgapi.TextEntity(
-                    type_=tgapi.TextEntityTypeMentionName(
-                        user_id=mention.contact.legacy_id
-                    ),
-                    offset=mention.start,
-                    length=mention.end - mention.start,
-                )
-            )
         result = await self.tg.send_formatted_text(
-            text=formatted_text,
+            text=to_formatted_text(text, mentions),
             chat_id=chat.legacy_id,
             reply_to_message_id=reply_to_msg_id,
         )
@@ -186,7 +168,13 @@ class Session(BaseSession[int, Recipient]):
 
     @catch_chat_not_found
     async def on_correct(
-        self, c: Recipient, text: str, legacy_msg_id: int, thread=None
+        self,
+        c: Recipient,
+        text: str,
+        legacy_msg_id: int,
+        *,
+        mentions: Optional[list[Mention]] = None,
+        **_kwargs,
     ):
         f = self.user_correction_futures[legacy_msg_id] = self.xmpp.loop.create_future()
         await self.tg.api.edit_message_text(
@@ -194,7 +182,7 @@ class Session(BaseSession[int, Recipient]):
             message_id=legacy_msg_id,
             reply_markup=None,  # type:ignore
             input_message_content=tgapi.InputMessageText.construct(
-                text=to_formatted_text(text)
+                text=to_formatted_text(text, mentions),
             ),
             skip_validation=True,
         )
