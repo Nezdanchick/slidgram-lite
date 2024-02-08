@@ -165,6 +165,7 @@ class Session(BaseSession[int, Recipient]):
             force_read=True,
         )
         self.log.debug("Send chat action res: %s", res)
+        await self.tg.api.read_all_chat_mentions(c.legacy_id)
 
     @catch_chat_not_found
     async def on_correct(
