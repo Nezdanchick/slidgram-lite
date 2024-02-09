@@ -482,6 +482,7 @@ class TelegramClient(aiotdlib.Client):
         self.log.warning("Ignoring Send success for %s", update.message.id)
 
     async def handle_BasicGroupFullInfo(self, update: tgapi.UpdateBasicGroupFullInfo):
+        await self.ready.wait()
         info = update.basic_group_full_info
         group = await self.get_basic_group(update.basic_group_id)
         muc: MUC = await self.session.bookmarks.by_group_id(group.id)
