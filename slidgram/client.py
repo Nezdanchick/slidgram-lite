@@ -485,7 +485,13 @@ class TelegramClient(aiotdlib.Client):
         await self.ready.wait()
         info = update.basic_group_full_info
         group = await self.get_basic_group(update.basic_group_id)
-        muc: MUC = await self.session.bookmarks.by_group_id(group.id)
+        muc = await self.session.bookmarks.by_group_id(group.id)
+        if muc is None:
+            self.log.debug(
+                "Received basic group full info for a group that could not be found: %s",
+                update.basic_group_full_info,
+            )
+            return
         await muc.update_info(info)
 
     async def handle_ActiveEmojiReactions(

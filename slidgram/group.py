@@ -52,7 +52,7 @@ class Bookmarks(LegacyBookmarks[int, "MUC"]):
         self.group_ids[group.id] = legacy_id
         return muc
 
-    async def by_group_id(self, group_id: int):
+    async def by_group_id(self, group_id: int) -> Optional["MUC"]:
         return await self.by_legacy_id(self.group_ids[group_id])
 
     async def jid_local_part_to_legacy_id(self, local_part: str):
