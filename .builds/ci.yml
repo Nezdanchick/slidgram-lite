@@ -45,5 +45,4 @@ tasks:
       export POETRY_PYPI_TOKEN_PYPI=$(cat ~/.pypi-token)
       set -x
 
-      cd $PROJECT
       poetry publish
