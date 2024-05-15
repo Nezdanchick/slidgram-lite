@@ -1,8 +1,10 @@
 [tool.poetry]
 name = "slidgram"
 version = "0.0.0-dev0"
-description = ""
+description = "A Telegram/XMPP gateway"
 authors = ["nicoco <nicoco@nicoco.fr>"]
+homepage = "https://git.sr.ht/~nicoco/slidgram"
+documentation = "https://slidge.im/slidgram"
 readme = "README.md"
 
 [[tool.poetry.source]]
