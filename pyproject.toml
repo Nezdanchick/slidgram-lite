@@ -20,7 +20,7 @@ priority = "primary"
 python = "^3.9"
 aiotdlib = "=0.22.0+slidge0"
 slidge-style-parser = "0.1.6"
-slidge = "0.1.2"
+slidge = "~0.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest-asyncio = "^0.21.0"
