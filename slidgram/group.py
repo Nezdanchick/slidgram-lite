@@ -94,13 +94,25 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
 
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
-        self.chat_id = self.legacy_id
-        #                                     tuple[participant, emoji]
-        self.reactions = defaultdict[int, set[tuple[Participant, str]]](set)
-        self.__fetch_subject_task = self.session.xmpp.loop.create_task(
-            self.update_subject_from_msg()
-        )
+        #                                     tuple[telegram user id, emoji]
+        self.reactions = defaultdict[int, set[tuple[int, str]]](set)
         self.__avatar_fetch_task = None
+
+    @property
+    def chat_id(self):
+        return self.legacy_id
+
+    def serialize_extra_attributes(self) -> Optional[dict]:
+        return {"reactions": {k: list(v) for k, v in self.reactions.items()}}
+
+    def deserialize_extra_attributes(self, data: dict) -> None:
+        # FIXME: why do we need int(k) here?
+        self.reactions.update(
+            {
+                int(k): {tuple(x) for x in v}
+                for k, v in data.get("reactions", {}).items()
+            }
+        )
 
     @staticmethod
     def __avatar_id(best: tgapi.File) -> Optional[int]:
@@ -189,6 +201,7 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
         self.name = name
         self.description = info.description
         await self.fill_participants(info)
+        self.session.create_task(self.update_subject_from_msg())
 
     async def update_subject_from_msg(self, msg: Optional[tgapi.Message] = None):
         if msg is None:
@@ -212,9 +225,9 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
                 self.subject_setter = await self.get_user_participant()
             else:
                 contact = await self.session.contacts.by_legacy_id(sender_id.user_id)
-                self.subject_setter = contact.name
+                self.subject_setter = await self.get_participant_by_contact(contact)
         else:
-            self.subject_setter = self.name
+            self.subject_setter = self.get_system_participant()
 
         if isinstance(content, tgapi.MessagePhoto):
             self.subject = formatted_text_to_xep_0393(content.caption)
@@ -262,7 +275,11 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
             raise RuntimeError
         self.log.debug("%s participants", len(members))
 
-        old = set(c.legacy_id for c in self._participants_by_contacts.keys())
+        old = set(
+            c.contact.legacy_id
+            for c in await self.get_participants(fill_first=False)
+            if c.contact is not None
+        )
         self.log.debug("Old participants: %s", old)
         for member in members:
             sender = member.member_id
@@ -362,9 +379,13 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
                 f.flush()
                 response = await self.session.tg.api.set_chat_photo(
                     self.legacy_id,
-                    tgapi.InputChatPhotoStatic(photo=tgapi.InputFileLocal(path=f.name))
-                    if data
-                    else None,
+                    (
+                        tgapi.InputChatPhotoStatic(
+                            photo=tgapi.InputFileLocal(path=f.name)
+                        )
+                        if data
+                        else None
+                    ),
                 )
         else:
             response = await self.session.tg.api.set_chat_photo(self.legacy_id, None)
@@ -415,13 +436,15 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
 
     async def parse_mentions_utf16(self, text: bytes) -> list[Mention]:
         # TODO: move this logic to slidge-style-parser
-        if len(self._participants_by_nicknames) == 0:
+        participants = {
+            p.name: p for p in await self.get_participants(fill_first=False)
+        }
+        if len(participants) == 0:
             return []
 
         result = []
         pattern = "|".encode("utf-8").join(
-            re.escape(nick.encode("utf-16-le"))
-            for nick in self._participants_by_nicknames
+            re.escape(nick.encode("utf-16-le")) for nick in participants
         )
         self.log.debug("text: %s", text)
         self.log.debug("pattern: %s", pattern)
@@ -430,7 +453,7 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
             self.log.debug("group: %s", match.group())
             span = match.span()
             nick = match.group().decode("utf-16-le")
-            participant = self._participants_by_nicknames[nick]
+            participant = participants[nick]
             if contact := participant.contact:
                 result.append(
                     Mention(contact=contact, start=span[0] // 2, end=span[1] // 2)
@@ -471,9 +494,9 @@ class Participant(LegacyParticipant, TelegramToXMPPMixin):
     session: "Session"
     muc: "MUC"
 
-    def __init__(self, *a, **k):
-        super().__init__(*a, **k)
-        self.chat_id = self.muc.legacy_id
+    @property
+    def chat_id(self):
+        return self.muc.legacy_id
 
     def __hash__(self):
         if self.is_user:

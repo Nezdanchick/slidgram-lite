@@ -3,7 +3,7 @@ import logging
 import shutil
 import typing
 
-from slidge import BaseGateway, FormField, GatewayUser, global_config, user_store
+from slidge import BaseGateway, FormField, GatewayUser, global_config
 from slidge.command.register import RegistrationType
 from slidge.util.util import is_valid_phone_number
 from slixmpp import JID
@@ -46,6 +46,8 @@ class Gateway(BaseGateway):
 
     GROUPS = True
 
+    LEGACY_MSG_ID_TYPE = LEGACY_CONTACT_ID_TYPE = LEGACY_ROOM_ID_TYPE = int
+
     def __init__(self):
         super().__init__()
         if not getattr(config, "TDLIB_PATH", None):
@@ -76,8 +78,8 @@ class Gateway(BaseGateway):
         phone = registration_form.get("phone")
         if not is_valid_phone_number(phone):
             raise ValueError("Not a valid phone number")
-        for u in user_store.get_all():
-            if u.registration_form.get("phone") == phone:
+        for u in self.store.users.get_all():
+            if u.legacy_module_data.get("phone") == phone:
                 raise XMPPError(
                     "not-allowed",
                     text="Someone is already using this phone number on this server.",
@@ -87,7 +89,7 @@ class Gateway(BaseGateway):
         self._pending_registrations[user_jid.bare] = auth_task, tg_client  # type:ignore
 
     async def validate_two_factor_code(self, user: GatewayUser, code: str):
-        auth_task, tg_client = self._pending_registrations.pop(user.bare_jid)
+        auth_task, tg_client = self._pending_registrations.pop(user.jid.bare)
         tg_client.code_future.set_result(code)
         try:
             await asyncio.wait_for(auth_task, config.REGISTRATION_AUTH_CODE_TIMEOUT)

@@ -115,7 +115,7 @@ class TelegramToXMPPMixin(ContentMessageMixin):
         if isinstance(reply_to_sender, tgapi.MessageSenderUser):
             sender_user_id = reply_to_sender.user_id
             if sender_user_id == self.session.contacts.user_legacy_id:
-                slidge_reference.author = self.session.user
+                slidge_reference.author = "user"
             elif self.is_group:
                 slidge_reference.author = await self.muc.get_participant_by_legacy_id(
                     sender_user_id

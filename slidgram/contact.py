@@ -15,10 +15,6 @@ if TYPE_CHECKING:
     from .session import Session
 
 
-async def noop():
-    return
-
-
 class Contact(TelegramToXMPPMixin, AvailableEmojisMixin, LegacyContact[int]):
     DISCO_TYPE = "phone"
     session: "Session"
@@ -27,29 +23,21 @@ class Contact(TelegramToXMPPMixin, AvailableEmojisMixin, LegacyContact[int]):
     UNKNOWN_RETRY_MAX_DELAY = 600
     UNKNOWN_MAX_ATTEMPTS = 10
 
-    def __init__(self, *a, **k):
-        super().__init__(*a, **k)
-        self.chat_id = self.legacy_id
-        self._online_expire_task = self.xmpp.loop.create_task(noop())
-        self.__avatar_fetch_task = None
-        self.__profile_fetch_task = None
+    @property
+    def chat_id(self):
+        return self.legacy_id
 
     async def get_telegram_user(self, force_update: bool = False):
         return await self.session.tg.get_user(self.legacy_id, force_update=force_update)
 
-    async def _expire_online(self, timestamp: Union[int, float]):
-        now = time.time()
-        how_long = timestamp - now
-        log.debug("Online status expires in %s seconds", how_long)
-        await asyncio.sleep(how_long)
-        self.away(last_seen=datetime.fromtimestamp(timestamp))
-
     def update_status(self, status: tgapi.UserStatus):
         if isinstance(status, tgapi.UserStatusLastMonth):
             self.extended_away(
-                "Offline since last month"
-                if global_config.LAST_SEEN_FALLBACK
-                else None,
+                (
+                    "Offline since last month"
+                    if global_config.LAST_SEEN_FALLBACK
+                    else None
+                ),
                 last_seen=datetime.now() - timedelta(days=31),
             )
         elif isinstance(status, tgapi.UserStatusLastWeek):
@@ -58,15 +46,20 @@ class Contact(TelegramToXMPPMixin, AvailableEmojisMixin, LegacyContact[int]):
                 last_seen=datetime.now() - timedelta(days=7),
             )
         elif isinstance(status, tgapi.UserStatusOffline):
-            if self._online_expire_task.done():
+            task = _online_expires_task.get(self.legacy_id)
+            if task is not None and task.done():
                 # we've never seen the contact online, so we use the was_online timestamp
                 self.away(last_seen=datetime.fromtimestamp(status.was_online))
         elif isinstance(status, tgapi.UserStatusOnline):
+            task = _online_expires_task.get(self.legacy_id)
+            if task is not None:
+                task.cancel()
             self.online()
-            self._online_expire_task.cancel()
-            self._online_expire_task = self.xmpp.loop.create_task(
-                self._expire_online(status.expires)
+            _online_expires_task[self.legacy_id] = self.xmpp.loop.create_task(
+                _expire_online(self.session, self.legacy_id, status.expires),
+                name=str(self.legacy_id),
             )
+            _online_expires_task[self.legacy_id].add_done_callback(_remove_task)
         elif isinstance(status, tgapi.UserStatusRecently):
             self.away(
                 "Last seen recently" if global_config.LAST_SEEN_FALLBACK else None,
@@ -107,7 +100,7 @@ class Contact(TelegramToXMPPMixin, AvailableEmojisMixin, LegacyContact[int]):
             self.name = full_name
         elif isinstance(user.type_, tgapi.UserTypeUnknown):
             self.name = f"Unknown user #{self.legacy_id}"
-            self.__profile_fetch_task = asyncio.create_task(self.__fetch_profile())
+            self.session.create_task(self.__fetch_profile())
         elif isinstance(user.type_, tgapi.UserTypeDeleted):
             self.name = f"Deleted user #{self.legacy_id}"
         else:
@@ -115,9 +108,7 @@ class Contact(TelegramToXMPPMixin, AvailableEmojisMixin, LegacyContact[int]):
 
         if photo := user.profile_photo:
             if self.avatar != photo.id:
-                self.__avatar_fetch_task = self.xmpp.loop.create_task(
-                    self.__fetch_avatar(user)
-                )
+                self.session.create_task(self.__fetch_avatar(user))
             else:
                 self.log.debug("Cached photo is OK")
         else:
@@ -193,5 +184,24 @@ class Roster(LegacyRoster[int, Contact]):
             self.session.tg.api.get_contacts()
         )
 
+
+def _remove_task(task: asyncio.Task):
+    try:
+        _online_expires_task.pop(int(task.get_name()))
+    except KeyError:
+        pass
+    log.debug("Tasks: %s", _online_expires_task)
+
+
+async def _expire_online(session, legacy_id: int, timestamp: Union[int, float]):
+    now = time.time()
+    how_long = timestamp - now
+    log.debug("Online status expires in %s seconds", how_long)
+    await asyncio.sleep(how_long)
+    contact = await session.contacts.by_legacy_id(legacy_id)
+    contact.away(last_seen=datetime.fromtimestamp(timestamp))
+
+
+_online_expires_task = dict[int, asyncio.Task]()
 
 log = logging.getLogger(__name__)

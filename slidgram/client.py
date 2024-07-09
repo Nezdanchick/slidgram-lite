@@ -85,7 +85,7 @@ class TelegramClient(aiotdlib.Client):
     def __init__(self, session: "Session"):
         super().__init__(
             parse_mode=aiotdlib.ClientParseMode.MARKDOWN,
-            **get_base_kwargs(session.user.registration_form),
+            **get_base_kwargs(session.user.legacy_module_data),
         )
         self.session = session
         self.contacts = session.contacts
@@ -166,7 +166,12 @@ class TelegramClient(aiotdlib.Client):
         if msg.is_outgoing:
             if msg.sending_state is not None:
                 return
-            if msg.id in self.session.sent:
+            if (
+                self.session.xmpp.store.sent.get_xmpp_id(
+                    self.session.user_pk, str(msg.id)
+                )
+                is not None
+            ):
                 return
 
         sender = await self.__get_contact_or_participant(msg)
@@ -409,13 +414,15 @@ class TelegramClient(aiotdlib.Client):
         if update.interaction_info is None:
             while True:
                 try:
-                    reacter, _ = muc.reactions[update.message_id].pop()
+                    reacter_id, _ = muc.reactions[update.message_id].pop()
+                    self.session.xmpp.store.rooms.update(muc)
                 except KeyError:
                     return
+                reacter = await muc.get_participant_by_legacy_id(reacter_id)
                 reacter.react(update.message_id)
 
         old_reacters = muc.reactions[update.message_id]
-        new_reacters = set()
+        new_reacters = set[tuple[int, str]]()
         for reaction in update.interaction_info.reactions:
             if not isinstance(reaction.type_, tgapi.ReactionTypeEmoji):
                 continue
@@ -426,19 +433,26 @@ class TelegramClient(aiotdlib.Client):
                     reacter = await muc.get_participant_by_legacy_id(sender_id.user_id)
                 else:
                     reacter = muc.get_system_participant()
-                new_reacters.add((reacter, emoji))
+                if reacter.is_user:
+                    assert isinstance(self.session.contacts.user_legacy_id, int)
+                    new_reacters.add((self.session.contacts.user_legacy_id, emoji))
+                elif reacter.contact is not None:
+                    new_reacters.add((reacter.contact.legacy_id, emoji))
 
         self.log.debug("Old reacters: %s", old_reacters)
         self.log.debug("New reacters: %s", new_reacters)
 
         old_all_reacters = {x[0] for x in old_reacters}
         new_all_reacters = {x[0] for x in new_reacters}
-        for unreacter in old_all_reacters - new_all_reacters:
+        for unreacter_id in old_all_reacters - new_all_reacters:
+            unreacter = await muc.get_participant_by_legacy_id(unreacter_id)
             unreacter.react(update.message_id)
-        for reacter, emoji in new_reacters - old_reacters:
-            reacter.react(update.message_id, emoji)
+        for reacter_id, emoji in new_reacters - old_reacters:
+            reacter = await muc.get_participant_by_legacy_id(reacter_id)
+            reacter.react(update.message_id, [emoji])
 
         muc.reactions[update.message_id] = new_reacters
+        self.session.xmpp.store.rooms.update(muc)
 
     async def handle_DeleteMessages(self, update: tgapi.UpdateDeleteMessages):
         if not update.is_permanent:  # tdlib send 'delete from cache' updates apparently
@@ -460,7 +474,12 @@ class TelegramClient(aiotdlib.Client):
                 continue
 
             if direct:
-                if legacy_msg_id in self.session.sent:
+                if (
+                    self.session.xmpp.store.sent.get_xmpp_id(
+                        self.session.user_pk, str(legacy_msg_id)
+                    )
+                    is not None
+                ):
                     contact.retract(legacy_msg_id, carbon=True)
                 else:
                     contact.retract(legacy_msg_id)
