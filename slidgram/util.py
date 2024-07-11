@@ -285,7 +285,7 @@ class TelegramToXMPPMixin(ContentMessageMixin):
         file_name: Optional[str] = None,
         **kwargs,
     ):
-        query = tgapi.DownloadFile.construct(
+        query = tgapi.DownloadFile.model_construct(
             file_id=best_file.id, synchronous=True, priority=1
         )
         size = best_file.size

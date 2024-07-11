@@ -3,7 +3,7 @@ import mimetypes
 import re
 import tempfile
 from collections import defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional, Union
 
 import aiotdlib.api as tgapi
@@ -259,10 +259,8 @@ class MUC(AvailableEmojisMixin, LegacyMUC[int, int, "Participant", int]):
                 members = (
                     await self.session.tg.api.get_supergroup_members(
                         supergroup_id=chat.type_.supergroup_id,  # type:ignore
-                        filter_=None,  # type:ignore
                         offset=0,
                         limit=self.MAX_SUPER_GROUP_PARTICIPANTS,
-                        skip_validation=True,
                     )
                 ).members
             else:
@@ -478,9 +476,7 @@ AFFILIATIONS = {
             is_anonymous=False,
         )
     ),
-    "outcast": tgapi.ChatMemberStatusBanned(
-        banned_until_date=(datetime.utcnow() + timedelta(days=1000)).timestamp()
-    ),
+    "outcast": tgapi.ChatMemberStatusBanned(),
     "owner": tgapi.ChatMemberStatusCreator(
         custom_title="", is_anonymous=False, is_member=True
     ),

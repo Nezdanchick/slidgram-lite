@@ -30,7 +30,7 @@ class Style:
             type_ = tgapi.TextEntityTypePreCode(language=self.lang)
         else:
             type_ = PARSER_TO_ENTITY.get(self.type_, tgapi.TextEntityTypeCode)()
-        return tgapi.TextEntity(type_=type_, offset=self.offset, length=self.length)
+        return tgapi.TextEntity(type=type_, offset=self.offset, length=self.length)
 
 
 def formatted_text_to_xep_0393(

@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Optional, Union, cast
 
 import aiotdlib
+from aiotdlib import ClientSettings
 from aiotdlib import api as tgapi
 from aiotdlib.api import BaseObject
 from aiotdlib.client import RequestResult
@@ -84,8 +85,10 @@ class CredentialsValidation(aiotdlib.Client):
 class TelegramClient(aiotdlib.Client):
     def __init__(self, session: "Session"):
         super().__init__(
-            parse_mode=aiotdlib.ClientParseMode.MARKDOWN,
-            **get_base_kwargs(session.user.legacy_module_data),
+            ClientSettings(
+                parse_mode=aiotdlib.ClientParseMode.MARKDOWN,
+                **get_base_kwargs(session.user.legacy_module_data),
+            )
         )
         self.session = session
         self.contacts = session.contacts
@@ -369,7 +372,7 @@ class TelegramClient(aiotdlib.Client):
 
         contact = await self.session.contacts.by_legacy_id(update.chat_id)
         me = await self.get_my_id()
-        if update.interaction_info is None:
+        if update.interaction_info is None or update.interaction_info.reactions is None:
             contact.react(update.message_id, [])
             contact.react(update.message_id, [], carbon=True)
             return
@@ -377,7 +380,7 @@ class TelegramClient(aiotdlib.Client):
         user_reactions = list[str]()
         contact_reactions = list[str]()
         # these sanity checks might not be necessary, but in doubt…
-        for reaction in update.interaction_info.reactions:
+        for reaction in update.interaction_info.reactions.reactions:
             if not isinstance(reaction.type_, tgapi.ReactionTypeEmoji):
                 continue
             if reaction.total_count == 1:
@@ -411,7 +414,7 @@ class TelegramClient(aiotdlib.Client):
 
     async def react_group(self, update: tgapi.UpdateMessageInteractionInfo):
         muc = await self.bookmarks.by_legacy_id(update.chat_id)
-        if update.interaction_info is None:
+        if update.interaction_info is None or update.interaction_info.reactions is None:
             while True:
                 try:
                     reacter_id, _ = muc.reactions[update.message_id].pop()
@@ -423,7 +426,7 @@ class TelegramClient(aiotdlib.Client):
 
         old_reacters = muc.reactions[update.message_id]
         new_reacters = set[tuple[int, str]]()
-        for reaction in update.interaction_info.reactions:
+        for reaction in update.interaction_info.reactions.reactions:
             if not isinstance(reaction.type_, tgapi.ReactionTypeEmoji):
                 continue
             emoji = reaction.type_.emoji
@@ -552,8 +555,8 @@ class TelegramClient(aiotdlib.Client):
         *,
         reply_to_message_id: Optional[int] = None,
     ):
-        return await self._Client__send_message(
+        return await self._send_message(
             chat_id=chat_id,
-            content=tgapi.InputMessageText.construct(text=text),
+            content=tgapi.InputMessageText.model_construct(text=text),
             reply_to_message_id=reply_to_message_id,
         )

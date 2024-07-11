@@ -31,6 +31,10 @@ class Contact(TelegramToXMPPMixin, AvailableEmojisMixin, LegacyContact[int]):
         return await self.session.tg.get_user(self.legacy_id, force_update=force_update)
 
     def update_status(self, status: tgapi.UserStatus):
+        if self.legacy_id == self.session.contacts.user_legacy_id:
+            # FIXME: This shouldn't happen but apparently it does
+            return
+
         if isinstance(status, tgapi.UserStatusLastMonth):
             self.extended_away(
                 (
@@ -141,7 +145,7 @@ class Contact(TelegramToXMPPMixin, AvailableEmojisMixin, LegacyContact[int]):
         if tg_user.is_contact:
             return
         await self.session.tg.api.add_contact(
-            contact=tgapi.Contact.construct(
+            contact=tgapi.Contact.model_construct(
                 user_id=tg_user.id,
                 first_name=tg_user.first_name,
                 last_name=tg_user.last_name,

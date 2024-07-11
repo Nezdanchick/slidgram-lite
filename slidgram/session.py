@@ -117,11 +117,26 @@ class Session(BaseSession[int, Recipient]):
             if stickers_pattern and re.match(stickers_pattern, file_name):
                 result = await self.tg.send_sticker(sticker=tmp_file_str, **kwargs)
             elif type_ == "image" and tmp_file.stat().st_size < 10_000_000:
-                result = await self.tg.send_photo(photo=tmp_file_str, **kwargs)
+                result = await self.tg.send_photo(
+                    photo=tmp_file_str,
+                    added_sticker_file_ids=[],
+                    photo_height=0,
+                    photo_width=0,
+                    **kwargs,
+                )
             elif type_ == "video":
-                result = await self.tg.send_video(video=tmp_file_str, **kwargs)
+                result = await self.tg.send_video(
+                    video=tmp_file_str,
+                    added_sticker_file_ids=[],
+                    duration=0,
+                    video_width=0,
+                    video_height=0,
+                    **kwargs,
+                )
             elif type_ == "audio":
-                result = await self.tg.send_audio(audio=tmp_file_str, **kwargs)
+                result = await self.tg.send_audio(
+                    audio=tmp_file_str, duration=0, **kwargs
+                )
             else:
                 result = await self.tg.send_document(document=tmp_file_str, **kwargs)
 
@@ -143,6 +158,7 @@ class Session(BaseSession[int, Recipient]):
     async def on_composing(self, c: Recipient, thread=None):
         res = await self.tg.api.send_chat_action(
             chat_id=c.legacy_id,
+            business_connection_id="",
             action=tgapi.ChatActionTyping(),  # type:ignore
             message_thread_id=0,  # TODO: check what telegram's threads really are
         )
@@ -152,6 +168,7 @@ class Session(BaseSession[int, Recipient]):
     async def on_paused(self, c: Recipient, thread=None):
         res = await self.tg.api.send_chat_action(
             chat_id=c.legacy_id,
+            business_connection_id="",
             action=tgapi.ChatActionCancel(),  # type:ignore
             message_thread_id=0,
         )
@@ -181,11 +198,9 @@ class Session(BaseSession[int, Recipient]):
         await self.tg.api.edit_message_text(
             chat_id=c.legacy_id,
             message_id=legacy_msg_id,
-            reply_markup=None,  # type:ignore
-            input_message_content=tgapi.InputMessageText.construct(
+            input_message_content=tgapi.InputMessageText.model_construct(
                 text=to_formatted_text(text, mentions),
             ),
-            skip_validation=True,
         )
         await f
 

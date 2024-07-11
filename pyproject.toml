@@ -18,7 +18,7 @@ priority = "primary"
 
 [tool.poetry.dependencies]
 python = "^3.9"
-aiotdlib = "=0.22.0+slidge0"
+aiotdlib = "=0.24.3+slidge0"
 slidge-style-parser = "0.1.6"
 slidge = "^0.2.0a0"
 
