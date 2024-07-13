@@ -7,7 +7,7 @@ A
 `XMPP <https://xmpp.org/>`_ puppeteering
 `gateway <https://xmpp.org/extensions/xep-0100.html>`_, based on
 `slidge <https://slidge.im>`_ and
-`aiotdlib <https://github.com/pylakey/aiotdlib>`_.
+`Pyrofork <https://pyrofork.mayuri.my.id/main/>`_.
 
 .. toctree::
    :maxdepth: 3

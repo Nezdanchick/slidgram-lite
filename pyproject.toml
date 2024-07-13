@@ -11,16 +11,12 @@ readme = "README.md"
 name = "PyPI"
 priority = "primary"
 
-[[tool.poetry.source]]
-name = "slidge-repo"
-url = "https://slidge.im/repo"
-priority = "primary"
-
 [tool.poetry.dependencies]
 python = "^3.9"
-aiotdlib = "=0.24.3+slidge0"
 slidge-style-parser = "0.1.6"
 slidge = "^0.2.0a0"
+tgcrypto = "^1.2.5"
+pyrofork = "^2.3.32"
 
 [tool.poetry.group.dev.dependencies]
 pytest-asyncio = "^0.21.0"
@@ -55,12 +51,6 @@ exclude = [
 ]
 check_untyped_defs = true
 strict = false
-
-[[tool.mypy.overrides]]
-module = [
-    "aiotdlib.*",
-]
-follow_imports = "skip"
 
 [tool.ruff]
 line-length = 120

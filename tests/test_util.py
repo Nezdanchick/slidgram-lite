@@ -1,4 +1,5 @@
-from aiotdlib import api
+from pyrogram.types import MessageEntity
+from pyrogram.enums import MessageEntityType
 
 from slidgram.text_entities import merge_consecutive_entities, entities_to_xep_0393
 
@@ -8,12 +9,8 @@ def test_parse_entities():
         entities_to_xep_0393(
             "Bon erfd dsa sdf",
             [
-                api.TextEntity.construct(
-                    offset=4, length=4, type_=api.TextEntityTypeItalic()
-                ),
-                api.TextEntity.construct(
-                    offset=9, length=3, type_=api.TextEntityTypeBold()
-                ),
+                MessageEntity(offset=4, length=4, type=MessageEntityType.ITALIC),
+                MessageEntity(offset=9, length=3, type=MessageEntityType.BOLD),
             ],
         )
         == "Bon _erfd_ *dsa* sdf"
@@ -25,12 +22,8 @@ def test_parse_nested_entities():
         entities_to_xep_0393(
             "Bon erfd dsa sdf",
             [
-                api.TextEntity.construct(
-                    offset=3, length=8, type_=api.TextEntityTypeBold()
-                ),
-                api.TextEntity.construct(
-                    offset=4, length=4, type_=api.TextEntityTypeItalic()
-                ),
+                MessageEntity(offset=3, length=8, type=MessageEntityType.BOLD),
+                MessageEntity(offset=4, length=4, type=MessageEntityType.ITALIC),
             ],
         )
         == "Bon* _erfd_ ds*a sdf"
@@ -42,13 +35,11 @@ def test_code_block():
         entities_to_xep_0393(
             "Example:\ndef prout():\n    print('P*O*T')\nBABY!!",
             [
-                api.TextEntity.construct(
-                    offset=9,
-                    length=31,
-                    type_=api.TextEntityTypePreCode(language="python"),
+                MessageEntity(
+                    offset=9, length=31, type=MessageEntityType.CODE, language="python"
                 ),
-                api.TextEntity.construct(
-                    offset=41, length=4, type_=api.TextEntityTypeStrikethrough()
+                MessageEntity(
+                    offset=41, length=4, type=MessageEntityType.STRIKETHROUGH
                 ),
             ],
         )
@@ -61,10 +52,11 @@ def test_link():
         entities_to_xep_0393(
             "Click this link.",
             [
-                api.TextEntity.construct(
+                MessageEntity(
                     offset=11,
                     length=4,
-                    type_=api.TextEntityTypeTextUrl(url="http"),
+                    type=MessageEntityType.URL,
+                    url="http",
                 ),
             ],
         )
@@ -75,46 +67,14 @@ def test_link():
 def test_merge():
     assert merge_consecutive_entities(
         [
-            api.TextEntity.construct(
-                offset=2,
-                length=4,
-                type_=api.TextEntityTypeBold(),
-            ),
-            api.TextEntity.construct(
-                offset=6,
-                length=1,
-                type_=api.TextEntityTypeBold(),
-            ),
-            api.TextEntity.construct(
-                offset=7,
-                length=1,
-                type_=api.TextEntityTypeBold(),
-            ),
-            api.TextEntity.construct(
-                offset=12,
-                length=15,
-                type_=api.TextEntityTypeBold(),
-            ),
-            api.TextEntity.construct(
-                offset=27,
-                length=20,
-                type_=api.TextEntityTypeItalic(),
-            ),
+            MessageEntity(offset=2, length=4, type=MessageEntityType.BOLD),
+            MessageEntity(offset=6, length=1, type=MessageEntityType.BOLD),
+            MessageEntity(offset=7, length=1, type=MessageEntityType.BOLD),
+            MessageEntity(offset=12, length=15, type=MessageEntityType.BOLD),
+            MessageEntity(offset=27, length=20, type=MessageEntityType.ITALIC),
         ]
     ) == [
-        api.TextEntity.construct(
-            offset=2,
-            length=6,
-            type_=api.TextEntityTypeBold(),
-        ),
-        api.TextEntity.construct(
-            offset=12,
-            length=15,
-            type_=api.TextEntityTypeBold(),
-        ),
-        api.TextEntity.construct(
-            offset=27,
-            length=20,
-            type_=api.TextEntityTypeItalic(),
-        ),
+        MessageEntity(offset=2, length=6, type=MessageEntityType.BOLD),
+        MessageEntity(offset=12, length=15, type=MessageEntityType.BOLD),
+        MessageEntity(offset=27, length=20, type=MessageEntityType.ITALIC),
     ]

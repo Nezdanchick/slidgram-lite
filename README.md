@@ -12,7 +12,7 @@ A
 [XMPP](https://xmpp.org/) puppeteering
 [gateway](https://xmpp.org/extensions/xep-0100.html), based on
 [slidge](https://slidge.im) and
-[aiotdlib](https://github.com/pylakey/aiotdlib).
+[Pyrofork](https://pyrofork.mayuri.my.id/main/).
 
 [![builds.sr.ht status](https://builds.sr.ht/~nicoco/slidgram/commits/master/ci.yml.svg)](https://builds.sr.ht/~nicoco/slidgram/commits/master/ci.yml)
 [![containers status](https://builds.sr.ht/~nicoco/slidgram/commits/master/container.yml.svg)](https://builds.sr.ht/~nicoco/slidgram/commits/master/container.yml)
@@ -54,3 +54,7 @@ git clone https://git.sr.ht/~nicoco/slidgram
 cd slidgram
 docker-compose up
 ```
+
+## Similar project
+
+https://dev.narayana.im/narayana/telegabber/

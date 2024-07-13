@@ -1,16 +1,23 @@
-import asyncio
 import logging
 import shutil
 import typing
 
-from slidge import BaseGateway, FormField, GatewayUser, global_config
-from slidge.command.register import RegistrationType
+import sqlalchemy as sa
+from pyrogram import Client
+from pyrogram.errors import SessionPasswordNeeded
+from pyrogram.types import User as TGUser
+from slidge import BaseGateway, global_config
+from slidge.command.register import (
+    FormField,
+    GatewayUser,
+    RegistrationType,
+    TwoFactorNotRequired,
+)
 from slidge.util.util import is_valid_phone_number
 from slixmpp import JID
 from slixmpp.exceptions import XMPPError
 
-from . import config
-from .client import CredentialsValidation
+from . import config, reactions
 
 if typing.TYPE_CHECKING:
     pass
@@ -42,6 +49,15 @@ class Gateway(BaseGateway):
 
     SEARCH_FIELDS = [
         FormField(var="phone", label="Phone number", required=True),
+        FormField(
+            var="first",
+            label="A first name for this contact (you can use whatever you want).",
+            required=True,
+        ),
+        FormField(
+            var="last",
+            label="A last name for this contact (you can use whatever you want).",
+        ),
     ]
 
     GROUPS = True
@@ -50,11 +66,6 @@ class Gateway(BaseGateway):
 
     def __init__(self):
         super().__init__()
-        if not getattr(config, "TDLIB_PATH", None):
-            config.TDLIB_PATH = global_config.HOME_DIR / "tdlib"
-        self._pending_registrations = dict[
-            str, tuple[asyncio.Task[CredentialsValidation], CredentialsValidation]
-        ]()
         if not config.API_ID:
             self.REGISTRATION_FIELDS.extend(
                 [
@@ -67,15 +78,21 @@ class Gateway(BaseGateway):
                     FormField(var="api_hash", label="API Hash", required=True),
                 ]
             )
-        log.debug("CONFIG %s", vars(config))
-        self.download_semaphore: asyncio.Semaphore = asyncio.Semaphore(
-            config.MAX_PARALLEL_DOWNLOADS
-        )
 
-    async def validate(
-        self, user_jid: JID, registration_form: dict[str, typing.Optional[str]]
-    ):
-        phone = registration_form.get("phone")
+        if not logging.getLogger().isEnabledFor(logging.DEBUG):
+            logging.getLogger("pyrogram.connection.connection").setLevel(
+                logging.WARNING
+            )
+            logging.getLogger("pyrogram.session.session").setLevel(logging.WARNING)
+
+        reactions_db_path = global_config.HOME_DIR / "reacters.sqlite"
+        reactions.engine = sa.create_engine(f"sqlite:///{reactions_db_path}")
+        if not reactions_db_path.exists():
+            reactions.Base.metadata.create_all(reactions.engine)
+
+    async def validate(self, user_jid: JID, registration_form: dict[str, str | None]):
+        phone = registration_form["phone"]
+        assert isinstance(phone, str)
         if not is_valid_phone_number(phone):
             raise ValueError("Not a valid phone number")
         for u in self.store.users.get_all():
@@ -84,16 +101,52 @@ class Gateway(BaseGateway):
                     "not-allowed",
                     text="Someone is already using this phone number on this server.",
                 )
-        tg_client = CredentialsValidation(registration_form)  # type: ignore
-        auth_task = self.loop.create_task(tg_client.start())
-        self._pending_registrations[user_jid.bare] = auth_task, tg_client  # type:ignore
+        tg_client = Client(
+            str(user_jid.bare),
+            phone_number=phone,
+            api_id=registration_form.get("api_id") or config.API_ID,
+            api_hash=registration_form.get("api_hash") or config.API_HASH,
+            workdir=global_config.HOME_DIR,
+        )
+        if await tg_client.connect():
+            await tg_client.disconnect()
+            raise TwoFactorNotRequired
+
+        sent_code = await tg_client.send_code(phone)
+        log.debug("The confirmation code for has been sent via %s", sent_code)
+
+        _clients[str(user_jid.bare)] = tg_client
+
+        return registration_form | {
+            "sent_code_hash": sent_code.phone_code_hash,
+            "api_id": registration_form.get("api_id") or config.API_ID,
+            "api_hash": registration_form.get("api_hash") or config.API_HASH,
+        }
 
     async def validate_two_factor_code(self, user: GatewayUser, code: str):
-        auth_task, tg_client = self._pending_registrations.pop(user.jid.bare)
-        tg_client.code_future.set_result(code)
+        phone = user.legacy_module_data["phone"]
+        code_hash = user.legacy_module_data["sent_code_hash"]
+
+        assert isinstance(phone, str)
+        assert isinstance(code_hash, str)
+
+        tg_client = _clients[str(user.jid)]
+        tg_client.phone_code = code
+
         try:
-            await asyncio.wait_for(auth_task, config.REGISTRATION_AUTH_CODE_TIMEOUT)
-        except asyncio.TimeoutError:
+            tg_user = await tg_client.sign_in(phone, code_hash, code)
+        except SessionPasswordNeeded as e:
+            log.debug("Password needed:", exc_info=e)
+            password = user.legacy_module_data["password"]
+            assert isinstance(password, str)
+            tg_user = await tg_client.check_password(password)
+            tg_client.password = password
+
+        await tg_client.disconnect()
+        del _clients[str(user.jid)]
+
+        if not isinstance(tg_user, TGUser):
+            log.error("Not a TG User: %s", tg_user)
             raise XMPPError(
                 "not-authorized",
                 text=(
@@ -101,7 +154,6 @@ class Gateway(BaseGateway):
                     "telegram network. Please retry and/or contact your slidge admin."
                 ),
             )
-        await tg_client.stop()
 
     async def unregister(self, user: GatewayUser):
         session = self.session_cls.from_user(user)
@@ -109,6 +161,9 @@ class Gateway(BaseGateway):
         workdir = session.tg.settings.files_directory.absolute()
         await session.tg.api.log_out()
         shutil.rmtree(workdir)
+
+
+_clients: dict[str, Client] = {}
 
 
 log = logging.getLogger(__name__)
