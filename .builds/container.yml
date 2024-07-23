@@ -23,6 +23,6 @@ tasks:
   - build: |
       cd slidgram
       export NAME=$REGISTRY_PREFIX/slidgram:$CONTAINER_TAG
-      export ARGS="--platform linux/arm64,linux/amd64 --tag $NAME --target slidgram ."
+      export ARGS="--platform linux/amd64 --tag $NAME --target slidgram ."
       docker buildx build $ARGS
       docker buildx build --push $ARGS || echo "We can't push to docker.io, continuing anyway"
