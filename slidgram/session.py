@@ -395,7 +395,6 @@ class Session(BaseSession[int, Recipient]):
             return
         self._send_action(actor, update.action)
 
-    @catch_peer_id_invalid
     def _send_action(
         self, actor: Contact | Participant, action: SendMessageAction
     ) -> None:
