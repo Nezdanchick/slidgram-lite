@@ -84,6 +84,7 @@ class Gateway(BaseGateway):
                 logging.WARNING
             )
             logging.getLogger("pyrogram.session.session").setLevel(logging.WARNING)
+            logging.getLogger("pyrogram.session.auth").setLevel(logging.WARNING)
 
         reactions_db_path = global_config.HOME_DIR / "reacters.sqlite"
         reactions.engine = sa.create_engine(f"sqlite:///{reactions_db_path}")
