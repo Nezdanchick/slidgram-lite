@@ -342,6 +342,13 @@ class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int
         self.subject = entities_to_xep_0393(
             message.text, message.entities, self.tg.me.id, self.user_nick
         )
+        self.subject_date = message.date
+        if message.from_user is None:
+            self.subject_setter = None
+        else:
+            self.subject_setter = (
+                message.from_user.username or message.from_user.full_name
+            )
 
     async def set_tg_pinned_message_ids(
         self, message_ids: list[int], pinned: bool | None
