@@ -145,7 +145,13 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
             when=message.date,
             archive_only=archive_only,
             link_previews=_get_link_previews(message),
-            content_type=getattr(media, "mime_type", None),
+            content_type=(
+                "image/jpeg"
+                if isinstance(
+                    media, Photo
+                )  # no mime_type attribute for Photos, but always JPEG
+                else getattr(media, "mime_type", None)
+            ),
         )
 
     async def __send_sticker(
