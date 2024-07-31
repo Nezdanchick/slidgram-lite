@@ -2,28 +2,11 @@ import logging
 from io import BytesIO
 
 import aiohttp
+import pyrogram.raw.types as pyro_raw_types
 from PIL import Image
 from pyrogram.enums import ChatAction, ChatType
 from pyrogram.raw.base import Peer, SendMessageAction, Update
 from pyrogram.raw.base.contacts import ImportedContacts
-from pyrogram.raw.types import (
-    ChatParticipant,
-    ChatParticipantAdmin,
-    ChatParticipantCreator,
-    ChatParticipantsForbidden,
-    PeerChat,
-    PeerUser,
-    SendMessageCancelAction,
-    SendMessageTypingAction,
-    UpdateChannelUserTyping,
-    UpdateChatParticipants,
-    UpdateChatUserTyping,
-    UpdatePinnedMessages,
-    UpdateReadChannelInbox,
-    UpdateReadHistoryInbox,
-    UpdateReadHistoryOutbox,
-    UpdateUserTyping,
-)
 from pyrogram.types import (
     Chat,
     ChatMemberUpdated,
@@ -34,7 +17,8 @@ from pyrogram.types import (
     User,
 )
 from pyrogram.utils import get_channel_id
-from slidge import BaseSession, FormField, SearchResult
+from slidge import BaseSession
+from slidge.command import FormField, SearchResult
 from slidge.util.types import Mention, RecipientType
 from slixmpp.exceptions import XMPPError
 
@@ -365,17 +349,17 @@ class Session(BaseSession[int, Recipient]):
 
     @catch_peer_id_invalid
     async def _on_tg_UpdateUserTyping(
-        self, update: UpdateUserTyping, _users, _chats
+        self, update: pyro_raw_types.UpdateUserTyping, _users, _chats
     ) -> None:
         actor = await self.contacts.by_legacy_id(update.user_id)
         self._send_action(actor, update.action)
 
     @catch_peer_id_invalid
     async def _on_tg_UpdateChatUserTyping(
-        self, update: UpdateChatUserTyping, _users, _chats
+        self, update: pyro_raw_types.UpdateChatUserTyping, _users, _chats
     ) -> None:
         muc = await self.bookmarks.by_legacy_id(-update.chat_id)
-        if isinstance(update.from_id, PeerUser):
+        if isinstance(update.from_id, pyro_raw_types.PeerUser):
             actor = await muc.get_participant_by_legacy_id(update.from_id.user_id)
         else:
             self.log.warning("Unknown peer: %s", update)
@@ -384,11 +368,11 @@ class Session(BaseSession[int, Recipient]):
 
     @catch_peer_id_invalid
     async def _on_tg_UpdateChannelUserTyping(
-        self, update: UpdateChannelUserTyping, _users, _chats
+        self, update: pyro_raw_types.UpdateChannelUserTyping, _users, _chats
     ) -> None:
         # TESTME
         muc = await self.bookmarks.by_legacy_id(get_channel_id(update.channel_id))
-        if isinstance(update.from_id, PeerUser):
+        if isinstance(update.from_id, pyro_raw_types.PeerUser):
             actor = await muc.get_participant_by_legacy_id(update.from_id.user_id)
         else:
             self.log.warning("Unknown peer: %s", update)
@@ -398,36 +382,36 @@ class Session(BaseSession[int, Recipient]):
     def _send_action(
         self, actor: Contact | Participant, action: SendMessageAction
     ) -> None:
-        if isinstance(action, SendMessageTypingAction):
+        if isinstance(action, pyro_raw_types.SendMessageTypingAction):
             actor.composing()
-        elif isinstance(action, SendMessageCancelAction):
+        elif isinstance(action, pyro_raw_types.SendMessageCancelAction):
             actor.paused()
         else:
             self.log.warning("Unknown action: %s for %s", action, actor)
 
     @catch_peer_id_invalid
     async def _on_tg_UpdateReadHistoryOutbox(
-        self, update: UpdateReadHistoryOutbox, _users, _chats
+        self, update: pyro_raw_types.UpdateReadHistoryOutbox, _users, _chats
     ) -> None:
         actor = await self._get_actor_by_peer(update.peer)
         actor.displayed(update.max_id)
 
     @catch_peer_id_invalid
     async def _on_tg_UpdateReadHistoryInbox(
-        self, update: UpdateReadHistoryInbox, _users, _chats: list[Chat]
+        self, update: pyro_raw_types.UpdateReadHistoryInbox, _users, _chats: list[Chat]
     ) -> None:
         actor = await self._get_actor_by_peer(update.peer)
         actor.displayed(update.max_id, carbon=True)
 
     @catch_peer_id_invalid
     async def _on_tg_UpdateReadChannelInbox(
-        self, update: UpdateReadChannelInbox, _users, _chats
+        self, update: pyro_raw_types.UpdateReadChannelInbox, _users, _chats
     ) -> None:
         pass
 
     @catch_peer_id_invalid
     async def _on_tg_UpdatePinnedMessages(
-        self, update: UpdatePinnedMessages, _users, _chats
+        self, update: pyro_raw_types.UpdatePinnedMessages, _users, _chats
     ) -> None:
         muc = await self._get_muc_by_peer(update.peer)
         if muc is None:
@@ -438,25 +422,25 @@ class Session(BaseSession[int, Recipient]):
     @catch_peer_id_invalid
     async def _on_tg_UpdateChatParticipants(
         self,
-        update: UpdateChatParticipants,
+        update: pyro_raw_types.UpdateChatParticipants,
         _users: dict[int, User],
         _chats: dict[int, Chat],
     ) -> None:
         muc = await self.bookmarks.by_legacy_id(-update.participants.chat_id)
-        if isinstance(update.participants, ChatParticipantsForbidden):
+        if isinstance(update.participants, pyro_raw_types.ChatParticipantsForbidden):
             self.log.warning(
                 "Received ChatParticipantsForbidden: %s", update.participants
             )
             return
         for tg_participant in update.participants.participants:
             participant = await muc.get_participant_by_legacy_id(tg_participant.user_id)
-            if isinstance(tg_participant, ChatParticipant):
+            if isinstance(tg_participant, pyro_raw_types.ChatParticipant):
                 participant.affiliation = "member"
                 participant.role = "participant"
-            elif isinstance(tg_participant, ChatParticipantAdmin):
+            elif isinstance(tg_participant, pyro_raw_types.ChatParticipantAdmin):
                 participant.affiliation = "admin"
                 participant.role = "moderator"
-            elif isinstance(tg_participant, ChatParticipantCreator):
+            elif isinstance(tg_participant, pyro_raw_types.ChatParticipantCreator):
                 participant.affiliation = "owner"
                 participant.role = "moderator"
             else:
@@ -486,9 +470,9 @@ class Session(BaseSession[int, Recipient]):
             raise RuntimeError(f"Unable to determine who sent this: {update}")
 
     async def _get_actor_by_peer(self, peer: Peer) -> Contact | Participant:
-        if isinstance(peer, PeerUser):
+        if isinstance(peer, pyro_raw_types.PeerUser):
             return await self.contacts.by_legacy_id(peer.user_id)
-        elif isinstance(peer, PeerChat):
+        elif isinstance(peer, pyro_raw_types.PeerChat):
             muc = await self.bookmarks.by_legacy_id(-peer.chat_id)
         elif isinstance(peer, PeerChannel):
             muc = await self.bookmarks.by_legacy_id(get_channel_id(peer.channel_id))
@@ -497,9 +481,9 @@ class Session(BaseSession[int, Recipient]):
         return muc.get_system_participant()
 
     async def _get_muc_by_peer(self, peer: Peer) -> MUC | None:
-        if isinstance(peer, PeerUser):
+        if isinstance(peer, pyro_raw_types.PeerUser):
             return None
-        if isinstance(peer, PeerChat):
+        if isinstance(peer, pyro_raw_types.PeerChat):
             return await self.bookmarks.by_legacy_id(-peer.chat_id)
         if isinstance(peer, PeerChannel):
             return await self.bookmarks.by_legacy_id(get_channel_id(peer.channel_id))
