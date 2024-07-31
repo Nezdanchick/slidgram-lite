@@ -37,7 +37,6 @@ class Roster(LegacyRoster[int, "Contact"]):
 class Contact(
     TelegramMessageSenderMixin, ReactionsMixin, SetAvatarMixin, LegacyContact[int]
 ):
-    DISCO_TYPE = "phone"
     session: "Session"
     legacy_id: int
 
@@ -56,7 +55,9 @@ class Contact(
         self.update_tg_status(user)
 
         if user.is_bot:
-            self.DISCO_TYPE = "bot"
+            self.client_type = "bot"
+        else:
+            self.client_type = "phone"
 
         self.set_vcard(
             given=user.first_name,
