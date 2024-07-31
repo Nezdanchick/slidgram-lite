@@ -382,7 +382,7 @@ class Session(BaseSession[int, Recipient]):
     def _send_action(
         self, actor: Contact | Participant, action: SendMessageAction
     ) -> None:
-        if isinstance(action, pyro_raw_types.SendMessageTypingAction):
+        if isinstance(action, _COMPOSING_TYPES):
             actor.composing()
         elif isinstance(action, pyro_raw_types.SendMessageCancelAction):
             actor.paused()
@@ -488,6 +488,17 @@ class Session(BaseSession[int, Recipient]):
         if isinstance(peer, PeerChannel):
             return await self.bookmarks.by_legacy_id(get_channel_id(peer.channel_id))
         return None
+
+
+_COMPOSING_TYPES = (
+    pyro_raw_types.SendMessageTypingAction,
+    pyro_raw_types.SendMessageChooseStickerAction,
+    pyro_raw_types.SendMessageUploadAudioAction,
+    pyro_raw_types.SendMessageUploadDocumentAction,
+    pyro_raw_types.SendMessageUploadPhotoAction,
+    pyro_raw_types.SendMessageUploadVideoAction,
+    pyro_raw_types.SendMessageUploadRoundAction,
+)
 
 
 log = logging.getLogger(__name__)
