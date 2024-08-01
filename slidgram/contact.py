@@ -13,6 +13,7 @@ from .reactions import ReactionsMixin
 from .tg_msg import TelegramMessageSenderMixin
 
 if TYPE_CHECKING:
+    from .gateway import Gateway
     from .session import Session
 
 
@@ -37,6 +38,7 @@ class Roster(LegacyRoster[int, "Contact"]):
 class Contact(
     TelegramMessageSenderMixin, ReactionsMixin, SetAvatarMixin, LegacyContact[int]
 ):
+    xmpp: "Gateway"
     session: "Session"
     legacy_id: int
 

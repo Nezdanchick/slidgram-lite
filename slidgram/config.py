@@ -32,3 +32,19 @@ BIG_AVATARS__DOC = (
     "Fetch contact avatars in high-resolution (640x640) instead of the "
     "default 160x160. NB: slidge core main config AVATAR_SIZE still applies."
 )
+
+CONVERT_STICKERS = True
+CONVERT_STICKERS__DOC = (
+    "Convert incoming animated stickers to webm videos. "
+    "Requires lottie_to_webm.sh in $PATH, cf <https://github.com/ed-asriyan/lottie-converter>, "
+    "along with FFMPEG."
+)
+
+CONVERT_STICKERS_EXECUTABLE = "lottie_to_webm.sh"
+CONVERT_STICKERS_EXECUTABLE__DOC = "Path to the TGS/webm converter executable."
+
+CONVERT_STICKERS_SIZE = 128
+CONVERT_STICKERS_SIZE__DOC = "Width and height video stickers."
+
+CONVERT_STICKERS_FPS = 60
+CONVERT_STICKERS_FPS__DOC = "Framerate of the video stickers"

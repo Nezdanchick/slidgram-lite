@@ -9,16 +9,21 @@ RUN python3 -m pip install --requirement requirements.txt
 FROM docker.io/nicocool84/slidge-base AS slidgram
 
 USER root
-RUN apt-get update && apt-get install libc++1 libssl3 -y
-
+RUN apt update && \
+    apt install --assume-yes ffmpeg && \
+    rm -rf /var/lib/apt/lists/*
 USER slidge
+
+COPY --from=docker.io/nicocool84/slidge-lottie /lottie-converter/* /usr/bin/
 COPY --from=builder /venv /venv
 COPY ./slidgram /venv/lib/python/site-packages/legacy_module
 
 # dev container
 FROM docker.io/nicocool84/slidge-dev AS dev
 
-USER root
-RUN apt-get update && apt-get install libc++1 libssl3 -y
+RUN apt update && \
+    apt install --assume-yes ffmpeg && \
+    rm -rf /var/lib/apt/lists/*
 
+COPY --from=docker.io/nicocool84/slidge-lottie /lottie-converter/* /usr/bin/
 COPY --from=builder /venv /venv

@@ -1,4 +1,6 @@
+import asyncio
 import logging
+import os
 from typing import TYPE_CHECKING
 
 from pyrogram.enums import ChatType
@@ -22,6 +24,7 @@ from .telegram import handle_flood
 from .text_entities import entities_to_xep_0393
 
 if TYPE_CHECKING:
+    from .gateway import Gateway
     from .session import Session
 
 TgMediaTypes = (
@@ -32,12 +35,21 @@ MSG_POLL = "/me sent a poll but this is not supported by slidgram yet"
 
 
 class TelegramMessageSenderMixin(ContentMessageMixin):
+    xmpp: "Gateway"
     session: "Session"
     log: logging.Logger
 
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
         self.send_file = handle_flood(self.send_file)  # type:ignore
+        self._convert_args = [
+            "--height",
+            str(config.CONVERT_STICKERS_SIZE),
+            "--width",
+            str(config.CONVERT_STICKERS_SIZE),
+            "--fps",
+            str(config.CONVERT_STICKERS_FPS),
+        ]
 
     @property
     def tg(self):
@@ -83,6 +95,18 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
     async def _send_media(
         self, message: Message, carbon: bool, correction=False, archive_only=False
     ) -> None:
+        if (
+            message.sticker is not None
+            and message.sticker.is_animated
+            and config.CONVERT_STICKERS
+        ):
+            try:
+                await self.__send_sticker(message, carbon, correction, archive_only)
+            except Exception as e:
+                self.log.error("Could not convert stickers.", exc_info=e)
+            else:
+                return
+
         media = _get_media(message)
         if media is None:
             self.log.warning("Could not determine media in %s", message)
@@ -122,6 +146,41 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
             archive_only=archive_only,
             link_previews=_get_link_previews(message),
             content_type=getattr(media, "mime_type", None),
+        )
+
+    async def __send_sticker(
+        self, message: Message, carbon: bool, correction=False, archive_only=False
+    ):
+        sticker = message.sticker
+        sticker_id = sticker.file_unique_id
+        webm_path = (self.xmpp.stickers_dir / sticker_id).with_suffix(".tgs.webm")
+
+        if not webm_path.exists():
+            tgs_filename = (self.xmpp.stickers_dir / sticker_id).with_suffix(".tgs")
+            downloader = self.tg.get_downloader(sticker.file_id)
+            with tgs_filename.open("wb") as fp:
+                async for chunk in downloader:
+                    fp.write(chunk)
+            self.log.debug("Converting sticker %s to video", sticker.file_id)
+            async with _conversion_lock:
+                proc = await asyncio.create_subprocess_exec(
+                    config.CONVERT_STICKERS_EXECUTABLE,
+                    str(tgs_filename),
+                    *self._convert_args,
+                )
+                await proc.communicate()
+            self.log.debug("Conversion finished with return code: %s", proc.returncode)
+
+        await self.send_file(
+            legacy_msg_id=message.id,
+            file_path=webm_path,
+            legacy_file_id="sticker-" + sticker_id,
+            reply_to=await self._get_reply_to(message.reply_to_message),
+            carbon=carbon,
+            correction=correction,
+            when=message.date,
+            archive_only=archive_only,
+            content_type="video/webm",
         )
 
     async def _get_reply_to(self, message: Message | None) -> MessageReference | None:
@@ -182,12 +241,14 @@ def _get_link_previews(message: Message) -> list[LinkPreview] | None:
 
 
 def _get_media(message: Message) -> TgMediaTypes | None:
+    if message.sticker is not None:
+        if message.sticker.is_animated and message.sticker.thumbs:
+            return message.sticker.thumbs[0]
+        if message.sticker.is_video:
+            return message.sticker
     for name in _MEDIAS:
         media = getattr(message, name, None)
         if media is not None:
-            if isinstance(media, Sticker):
-                if media.thumbs:
-                    return media.thumbs[0]
             return media
     return None
 
@@ -203,3 +264,9 @@ _MEDIAS = (
     "video_note",
     "new_chat_photo",
 )
+
+cpu_count = os.cpu_count()
+if cpu_count is None or cpu_count <= 2:
+    _conversion_lock: asyncio.Lock | asyncio.Semaphore = asyncio.Lock()
+else:
+    _conversion_lock = asyncio.Semaphore(cpu_count - 1)
