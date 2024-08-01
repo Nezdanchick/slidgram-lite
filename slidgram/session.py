@@ -275,6 +275,9 @@ class Session(BaseSession[int, Recipient]):
 
     @catch_peer_id_invalid
     async def _on_tg_edit(self, _tg: TelegramClient, message: Message) -> None:
+        if message.text is None:
+            return
+
         if message.edit_date is None:
             return
 
