@@ -103,7 +103,10 @@ class Session(BaseSession[int, Recipient]):
     ) -> None:
         text, entities = await styling_to_entities(text, mentions)
         await self.tg.edit_message_text(
-            chat.legacy_id, legacy_msg_id, text, entities=entities
+            chat.legacy_id,
+            legacy_msg_id,
+            text,
+            entities=entities,
         )
 
     @tg_to_xmpp_errors
@@ -117,13 +120,29 @@ class Session(BaseSession[int, Recipient]):
         **_kwargs,
     ) -> int:
         if http_response.content_type.startswith("audio"):
-            message = await self.tg.send_audio(chat.legacy_id, url)
+            message = await self.tg.send_audio(
+                chat.legacy_id,
+                url,
+                reply_to_message_id=reply_to_msg_id,  # type:ignore
+            )
         elif http_response.content_type.startswith("video"):
-            message = await self.tg.send_video(chat.legacy_id, url)
+            message = await self.tg.send_video(
+                chat.legacy_id,
+                url,
+                reply_to_message_id=reply_to_msg_id,  # type:ignore
+            )
         elif http_response.content_type.startswith("image"):
-            message = await self.tg.send_photo(chat.legacy_id, url)
+            message = await self.tg.send_photo(
+                chat.legacy_id,
+                url,
+                reply_to_message_id=reply_to_msg_id,  # type:ignore
+            )
         else:
-            message = await self.tg.send_document(chat.legacy_id, url)
+            message = await self.tg.send_document(
+                chat.legacy_id,
+                url,
+                reply_to_message_id=reply_to_msg_id,  # type:ignore
+            )
         if message is None:
             raise XMPPError(
                 "internal-server-error", "Telegram did not confirm this message"
