@@ -5,6 +5,7 @@ import aiohttp
 import pyrogram.raw.types as pyro_raw_types
 from PIL import Image
 from pyrogram.enums import ChatAction, ChatType
+from pyrogram.errors import FileReferenceExpired
 from pyrogram.raw.base import Peer, SendMessageAction, Update
 from pyrogram.raw.base.contacts import ImportedContacts
 from pyrogram.types import (
@@ -19,7 +20,7 @@ from pyrogram.types import (
 from pyrogram.utils import get_channel_id
 from slidge import BaseSession
 from slidge.command import FormField, SearchResult
-from slidge.util.types import Mention, RecipientType
+from slidge.util.types import Mention, RecipientType, Sticker
 from slixmpp.exceptions import XMPPError
 
 from .contact import Contact
@@ -147,6 +148,67 @@ class Session(BaseSession[int, Recipient]):
             raise XMPPError(
                 "internal-server-error", "Telegram did not confirm this message"
             )
+        return message.id
+
+    @tg_to_xmpp_errors
+    async def on_sticker(
+        self,
+        chat: Recipient,
+        sticker: Sticker,
+        *,
+        reply_to_msg_id: int | None = None,
+        **_kwargs,
+    ) -> int:
+        stickers = self.user.legacy_module_data.get("stickers", {})
+        assert isinstance(stickers, dict)
+        h = sticker.hashes["sha_512"]
+        assert isinstance(h, str)
+        if (file_id := stickers.get(h)) is None:
+            self.log.debug("Uploading a new sticker")
+            return await self.__new_sticker(chat, sticker, reply_to_msg_id)
+        self.log.debug("Reusing a previous sticker")
+        assert isinstance(file_id, str)
+        try:
+            message = await self.tg.send_sticker(
+                chat.legacy_id,
+                file_id,
+                reply_to_message_id=reply_to_msg_id,  # type:ignore
+            )
+        except FileReferenceExpired:
+            self.log.warning("Sticker has expired, sending it again")
+            return await self.__new_sticker(chat, sticker, reply_to_msg_id)
+        assert message is not None
+        return message.id
+
+    async def __new_sticker(
+        self, chat: Recipient, sticker: Sticker, reply_to_msg_id: int | None
+    ) -> int:
+        stickers = self.user.legacy_module_data.get("stickers", {})
+        if sticker.content_type != "image/webp" and (
+            (img := Image.open(sticker.path)).format != "WEBP"
+        ):
+            with BytesIO() as fp:
+                await self.xmpp.loop.run_in_executor(None, img.save, fp, "WEBP")
+                fp.flush()
+                fp.seek(0)
+                fp.name = "xmpp-sticker.webp"
+                message = await self.tg.send_sticker(
+                    chat.legacy_id,
+                    fp,
+                    reply_to_message_id=reply_to_msg_id,  # type:ignore
+                )
+        else:
+            message = await self.tg.send_sticker(
+                chat.legacy_id,
+                str(sticker.path),
+                reply_to_message_id=reply_to_msg_id,  # type:ignore
+            )
+        assert message is not None
+        if message.sticker is None:
+            self.log.warning("%s was not sent as a sticker.", sticker.path)
+            return message.id
+        stickers[sticker.hashes["sha_512"]] = message.sticker.file_id  # type:ignore
+        self.legacy_module_data_update({"stickers": stickers})
         return message.id
 
     @tg_to_xmpp_errors
