@@ -56,6 +56,13 @@ class Bookmarks(LegacyBookmarks[int, "MUC"]):
                 ChatType.SUPERGROUP,
                 ChatType.CHANNEL,
             ):
+                if (
+                    dialog.top_message is not None
+                    and dialog.top_message.left_chat_member is not None
+                    and dialog.top_message.left_chat_member.is_self
+                ):
+                    # destroyed groups or groups that have been left
+                    continue
                 muc = await self.by_legacy_id(dialog.chat.id)
                 await muc.add_to_bookmarks(auto_join=dialog.chat.type == ChatType.GROUP)
 
@@ -103,8 +110,8 @@ class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int
         if self.type == MucType.CHANNEL:
             return
 
-        me_member = await self.tg.get_chat_member(self.legacy_id, "me")
-
+        me = None
+        me_member = None
         it = self.tg.get_chat_members(self.legacy_id, limit=100)
         assert it is not None
         async for member in it:
@@ -114,9 +121,15 @@ class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int
 
             participant = await self.get_participant_by_legacy_id(member.user.id)
             participant.update_tg_member(member)
+            if participant.is_user:
+                me = participant
+                me_member = member
+                continue
             yield participant
 
-        me = await self.get_user_participant()
+        if me is None or me_member is None:
+            me = await self.get_user_participant()
+            me_member = await self.tg.get_chat_member(self.legacy_id, "me")
         if me_member.status == ChatMemberStatus.OWNER:
             me.affiliation = "owner"
             me.role = "moderator"
