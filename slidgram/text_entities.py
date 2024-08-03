@@ -157,7 +157,7 @@ async def styling_to_entities(
         if formatting == "mention":
             entities.append(
                 MessageEntity(
-                    type=MessageEntityType.MENTION,
+                    type=MessageEntityType.TEXT_MENTION,
                     offset=offset,
                     length=length,
                     user=await mentions.pop(0).contact.get_tg_user(),  # type:ignore
