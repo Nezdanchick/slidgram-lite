@@ -36,7 +36,7 @@ class Roster(LegacyRoster[int, "Contact"]):
 
 
 class Contact(
-    TelegramMessageSenderMixin, ReactionsMixin, SetAvatarMixin, LegacyContact[int]
+    ReactionsMixin, TelegramMessageSenderMixin, SetAvatarMixin, LegacyContact[int]
 ):
     xmpp: "Gateway"
     session: "Session"

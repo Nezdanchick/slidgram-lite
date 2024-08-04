@@ -54,7 +54,7 @@ class Client(TelegramClient):
             workdir=str(global_config.HOME_DIR),
         )
 
-        self._available_reactions = set[str]()
+        self._available_reactions: set[str] | None = None
         self.log = logging.getLogger(f"Telegram:{name}")
 
         self.get_chat = handle_flood(self.get_chat)  # type: ignore
