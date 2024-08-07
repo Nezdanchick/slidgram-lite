@@ -1,9 +1,4 @@
-from slidge import entrypoint
-
-
-def main():
-    entrypoint("slidgram")
-
+from slidgram import main
 
 if __name__ == "__main__":
     main()

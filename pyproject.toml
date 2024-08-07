@@ -42,7 +42,7 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-slidgram = "slidgram.__main__:main"
+slidgram = "slidgram:main"
 
 [tool.mypy]
 files = ["slidgram"]
