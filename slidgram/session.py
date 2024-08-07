@@ -1,5 +1,8 @@
 import logging
 from io import BytesIO
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from urllib.parse import unquote
 
 import aiohttp
 import pyrogram.raw.types as pyro_raw_types
@@ -120,30 +123,44 @@ class Session(BaseSession[int, Recipient]):
         reply_to_msg_id: int | None = None,
         **_kwargs,
     ) -> int:
-        if http_response.content_type.startswith("audio"):
-            message = await self.tg.send_audio(
-                chat.legacy_id,
-                url,
-                reply_to_message_id=reply_to_msg_id,  # type:ignore
-            )
-        elif http_response.content_type.startswith("video"):
-            message = await self.tg.send_video(
-                chat.legacy_id,
-                url,
-                reply_to_message_id=reply_to_msg_id,  # type:ignore
-            )
-        elif http_response.content_type.startswith("image"):
-            message = await self.tg.send_photo(
-                chat.legacy_id,
-                url,
-                reply_to_message_id=reply_to_msg_id,  # type:ignore
-            )
-        else:
-            message = await self.tg.send_document(
-                chat.legacy_id,
-                url,
-                reply_to_message_id=reply_to_msg_id,  # type:ignore
-            )
+        file_name = unquote(url.split("/")[-1])
+        content_type = http_response.content_type
+        # we cannot use TemporaryFile() because pyrofork checks whether fp is
+        # an io.IOBase instance, which it is not, despite implementing seek(),
+        # tell(), and read()
+        with (
+            TemporaryDirectory() as tmp_dir,
+            (Path(tmp_dir) / file_name).open("ab+") as fp,
+        ):
+            async for chunk in http_response.content:
+                fp.write(chunk)
+            if content_type.startswith("audio"):
+                message = await self.tg.send_audio(
+                    chat.legacy_id,
+                    fp,
+                    file_name=file_name,  # pyrofork includes the full path without that
+                    reply_to_message_id=reply_to_msg_id,  # type:ignore
+                )
+            elif content_type.startswith("video"):
+                message = await self.tg.send_video(
+                    chat.legacy_id,
+                    fp,
+                    file_name=file_name,
+                    reply_to_message_id=reply_to_msg_id,  # type:ignore
+                )
+            elif content_type.startswith("image"):
+                message = await self.tg.send_photo(
+                    chat.legacy_id,
+                    fp,
+                    reply_to_message_id=reply_to_msg_id,  # type:ignore
+                )
+            else:
+                message = await self.tg.send_document(
+                    chat.legacy_id,
+                    fp,
+                    file_name=file_name,
+                    reply_to_message_id=reply_to_msg_id,  # type:ignore
+                )
         if message is None:
             raise XMPPError(
                 "internal-server-error", "Telegram did not confirm this message"
