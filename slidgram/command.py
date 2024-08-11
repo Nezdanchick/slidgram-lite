@@ -13,7 +13,7 @@ class JoinPublicChat(Command):
     HELP = "Join a public channel, private group or supergroup"
     NODE = CHAT_COMMAND = "join-chat"
     ACCESS = CommandAccess.USER_LOGGED
-    INSTRUCTIONS = "Use a tg:// URI or a or a https://tg.me URL to join a group"
+    INSTRUCTIONS = "Use a tg:// URI or a or a https://t.me URL to join a group"
     CATEGORY = GROUPS
 
     async def run(self, _session, _ifrom, *_args):
