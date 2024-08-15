@@ -557,15 +557,15 @@ class Session(BaseSession[int, Recipient]):
         muc = await self.bookmarks.by_legacy_id(update.chat.id)
         if update.from_user is not None:
             return await muc.get_participant_by_legacy_id(update.from_user.id), False
-        if update.sender_chat:
-            return muc.get_system_participant(), True
         if update.sender_business_bot is not None:
             return (
                 await muc.get_participant_by_legacy_id(update.sender_business_bot.id),
                 False,
             )
-        else:
-            raise RuntimeError(f"Unable to determine who sent this: {update}")
+        if update.sender_chat or update.chat.type == ChatType.CHANNEL:
+            return muc.get_system_participant(), False
+
+        raise RuntimeError(f"Unable to determine who sent this: {update}")
 
     async def _get_actor_by_peer(self, peer: Peer) -> Contact | Participant:
         if isinstance(peer, pyro_raw_types.PeerUser):
