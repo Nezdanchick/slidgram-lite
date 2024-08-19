@@ -118,13 +118,22 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
                 f"Unsupported media type: {message.media}",
             )
             return
+        if message.caption is None:
+            caption = None
+        else:
+            caption = self._to_message_styling_caption(message)
         if media.file_size > config.ATTACHMENT_MAX_SIZE:
+            text = f"{media} (larger than {config.ATTACHMENT_MAX_SIZE})"
+            if message.text:
+                text += f"\n{self._to_message_styling(message)}"
+            if caption:
+                text += f"\n{caption}"
             await self.__send_text(
                 message,
                 carbon,
                 correction,
                 archive_only,
-                f"{media} (larger than {config.ATTACHMENT_MAX_SIZE})",
+                text,
             )
             return
         self.log.debug("Downloading %s", media.file_id)
@@ -138,7 +147,7 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
             async_data_stream=downloader,
             file_name=getattr(media, "file_name", None),
             legacy_file_id=media.file_unique_id,
-            caption=message.caption,
+            caption=caption,
             reply_to=await self._get_reply_to(message.reply_to_message),
             carbon=carbon,
             correction=correction,
@@ -221,6 +230,15 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
         assert self.tg.me is not None
         return entities_to_xep_0393(
             message.text, message.entities, self.tg.me.id, self.bookmarks.user_nick
+        )
+
+    def _to_message_styling_caption(self, message: Message) -> str:
+        assert self.tg.me is not None
+        return entities_to_xep_0393(
+            message.caption,
+            message.caption_entities,
+            self.tg.me.id,
+            self.bookmarks.user_nick,
         )
 
 
