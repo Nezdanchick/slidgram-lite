@@ -317,13 +317,15 @@ class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int
     @tg_to_xmpp_errors
     async def on_destroy_request(self, reason: str | None):
         if self.type == MucType.CHANNEL_NON_ANONYMOUS:
-            await self.tg.delete_supergroup(self.legacy_id)
-        elif self.type == MucType.GROUP:
-            raise XMPPError("feature-not-implemented")
+            success = await self.tg.delete_supergroup(self.legacy_id)
+        elif self.type == MucType.CHANNEL:
+            success = await self.tg.delete_channel(self.legacy_id)
         else:
-            raise XMPPError(
-                "feature-not-implemented", "Channels cannot be deleted this way"
-            )
+            await self.tg.leave_chat(self.legacy_id, delete=True)
+            success = True
+
+        if not success:
+            raise XMPPError("internal-server-error", "The group could not be deleted")
 
     @tg_to_xmpp_errors
     async def on_avatar(self, data: bytes | None, mime: str | None) -> None:
