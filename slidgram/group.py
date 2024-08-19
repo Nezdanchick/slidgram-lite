@@ -343,25 +343,43 @@ class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int
     def set_tg_pinned_message(self, message: Message | None = None) -> None:
         if message is None:
             self.subject = ""
+            self.subject_date = None
+            self.subject_setter = None
             return
 
         self.pinned_message_ids.append(message.id)
-
-        if message.text is None:
-            self.subject = ""
-            return
-
-        assert self.tg.me is not None
-        self.subject = entities_to_xep_0393(
-            message.text, message.entities, self.tg.me.id, self.user_nick
-        )
-        self.subject_date = message.date
+        if message.date is None:
+            self.subject_date = None
+        else:
+            if message.edit_date is None:
+                self.subject_date = message.date.replace(tzinfo=timezone.utc)
+            else:
+                self.subject_date = message.edit_date.replace(tzinfo=timezone.utc)
         if message.from_user is None:
             self.subject_setter = None
         else:
             self.subject_setter = (
                 message.from_user.username or message.from_user.full_name
             )
+
+        if message.text is not None:
+            assert self.tg.me is not None
+            self.subject = entities_to_xep_0393(
+                message.text, message.entities, self.tg.me.id, self.user_nick
+            )
+            return
+
+        if message.caption is not None:
+            assert self.tg.me is not None
+            self.subject = entities_to_xep_0393(
+                message.caption, message.caption_entities, self.tg.me.id, self.user_nick
+            )
+            return
+
+        self.subject = (
+            f"The last pinned message is an attachment without caption: {message.media}."
+            "This is unsupported by slidgram."
+        )
 
     async def set_tg_pinned_message_ids(
         self, message_ids: list[int], pinned: bool | None
