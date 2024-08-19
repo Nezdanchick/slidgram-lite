@@ -498,14 +498,16 @@ class Session(BaseSession[int, Recipient]):
     async def _on_tg_UpdateReadHistoryInbox(
         self, update: pyro_raw_types.UpdateReadHistoryInbox, _users, _chats: list[Chat]
     ) -> None:
-        actor = await self._get_actor_by_peer(update.peer)
+        actor = await self._get_actor_by_peer(update.peer, user=True)
         actor.displayed(update.max_id, carbon=True)
 
     @catch_peer_id_invalid
     async def _on_tg_UpdateReadChannelInbox(
         self, update: pyro_raw_types.UpdateReadChannelInbox, _users, _chats
     ) -> None:
-        pass
+        muc = await self.bookmarks.by_legacy_id(get_channel_id(update.channel_id))
+        part = await muc.get_user_participant()
+        part.displayed(update.max_id)
 
     @catch_peer_id_invalid
     async def _on_tg_UpdatePinnedMessages(
@@ -567,7 +569,7 @@ class Session(BaseSession[int, Recipient]):
 
         raise RuntimeError(f"Unable to determine who sent this: {update}")
 
-    async def _get_actor_by_peer(self, peer: Peer) -> Contact | Participant:
+    async def _get_actor_by_peer(self, peer: Peer, user=False) -> Contact | Participant:
         if isinstance(peer, pyro_raw_types.PeerUser):
             return await self.contacts.by_legacy_id(peer.user_id)
         elif isinstance(peer, pyro_raw_types.PeerChat):
@@ -576,6 +578,8 @@ class Session(BaseSession[int, Recipient]):
             muc = await self.bookmarks.by_legacy_id(get_channel_id(peer.channel_id))
         else:
             raise RuntimeError("Invalid peer", peer)
+        if user:
+            return await muc.get_user_participant()
         return muc.get_system_participant()
 
     async def _get_muc_by_peer(self, peer: Peer) -> MUC | None:
