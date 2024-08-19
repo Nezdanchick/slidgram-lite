@@ -12,6 +12,7 @@ from pyrogram.types import (
     Photo,
     Sticker,
     Thumbnail,
+    Video,
     VideoNote,
     Voice,
     WebPageEmpty,
@@ -28,7 +29,15 @@ if TYPE_CHECKING:
     from .session import Session
 
 TgMediaTypes = (
-    Audio | Document | Photo | Sticker | Animation | Voice | VideoNote | Thumbnail
+    Audio
+    | Document
+    | Photo
+    | Sticker
+    | Animation
+    | Voice
+    | Video
+    | VideoNote
+    | Thumbnail
 )
 
 MSG_POLL = "/me sent a poll but this is not supported by slidgram yet"
