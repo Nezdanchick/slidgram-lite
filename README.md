@@ -41,7 +41,7 @@ With [pipx](https://pypa.github.io/pipx/):
 pipx install slidgram
 
 # for the bleeding edge
-pipx install slidgram \
+pipx install slidgram==0.0.0.dev0 \
     --pip-args='--extra-index-url https://slidge.im/repo'
 
 slidgram --help
