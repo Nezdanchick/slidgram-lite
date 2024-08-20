@@ -44,6 +44,10 @@ pipx install slidgram
 pipx install slidgram==0.0.0.dev0 \
     --pip-args='--extra-index-url https://slidge.im/repo'
 
+# to update bleeding edge installs
+pipx install slidgram==0.0.0.dev0 \
+    --pip-args='--extra-index-url https://slidge.im/repo' --force
+
 slidgram --help
 ```
 
