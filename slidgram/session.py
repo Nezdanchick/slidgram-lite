@@ -45,7 +45,7 @@ class Session(BaseSession[int, Recipient]):
         self.__init_tg()
 
     def __init_tg(self):
-        self.tg = TelegramClient(self.user_jid.bare, self.user.legacy_module_data)
+        self.tg = TelegramClient(self.user_jid.bare)
 
         # need to be in a different group than other handlers or else it's not used
         self.tg.on_raw_update(group=10)(self._on_tg_raw)  # type:ignore

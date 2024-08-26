@@ -45,14 +45,8 @@ class InvalidUserException(Exception):
 class Client(TelegramClient):
     message_cache: "MessageCache"
 
-    def __init__(self, name: str, legacy_module_data: dict) -> None:
-        super().__init__(
-            name,
-            phone_number=legacy_module_data["phone"],
-            api_hash=legacy_module_data["phone"],
-            api_id=legacy_module_data["api_id"],
-            workdir=str(global_config.HOME_DIR),
-        )
+    def __init__(self, name: str) -> None:
+        super().__init__(name, workdir=str(global_config.HOME_DIR))
 
         self._available_reactions: set[str] | None = None
         self.log = logging.getLogger(f"Telegram:{name}")
