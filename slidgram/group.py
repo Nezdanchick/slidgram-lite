@@ -118,9 +118,12 @@ class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int
     @tg_to_xmpp_errors_it
     async def fill_participants(self):
         if self.type == MucType.CHANNEL:
+            me = await self.get_user_participant()
+            me.role = "visitor"
+            yield me
             return
 
-        me = None
+        me = None  # type:ignore
         me_member = None
         it = self.tg.get_chat_members(self.legacy_id, limit=100)
         assert it is not None
@@ -152,8 +155,8 @@ class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int
         elif (
             me_member.status == ChatMemberStatus.RESTRICTED
             and not me_member.permissions.can_send_messages
-        ) or self.type == MucType.CHANNEL:
-            me.role = "none"
+        ):
+            me.role = "visitor"
         yield me
 
     @tg_to_xmpp_errors
