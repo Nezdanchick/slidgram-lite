@@ -7,7 +7,7 @@ from urllib.parse import unquote
 import aiohttp
 import pyrogram.raw.types as pyro_raw_types
 from PIL import Image
-from pyrogram.enums import ChatAction, ChatType
+from pyrogram.enums import ChatAction, ChatType, MessageServiceType
 from pyrogram.errors import FileReferenceExpired
 from pyrogram.raw.base import Peer, SendMessageAction, Update
 from pyrogram.raw.base.contacts import ImportedContacts
@@ -369,6 +369,19 @@ class Session(BaseSession[int, Recipient]):
     @catch_peer_id_invalid
     async def _on_tg_msg(self, _tg: TelegramClient, message: Message) -> None:
         sender, carbon = await self.get_sender(message)
+        # TODO: use pyrogram's filters, eg:
+        #  https://pyrofork.mayuri.my.id/main/api/filters.html#pyrogram.filters.left_chat_member
+        if (
+            isinstance(sender, Participant)
+            and sender.is_user
+            and message.service == MessageServiceType.LEFT_CHAT_MEMBERS
+        ):
+            # after leaving, we cache deleted message events, and they re-spawn
+            # the MUC in slidge's DB if these message could be resolved.
+            # Removing them from the cache solves the issue.
+            self.tg.message_cache.remove_chat(sender.muc.legacy_id)
+            await self.bookmarks.remove(sender.muc)
+            return
         await sender.send_tg_msg(message, carbon=carbon)
 
     @catch_peer_id_invalid
@@ -420,7 +433,7 @@ class Session(BaseSession[int, Recipient]):
             msg_id = message.id
             message = self.tg.message_cache.get_by_message_id(msg_id)
             if message is None:
-                self.log.warning(
+                self.log.debug(
                     "Received a message deletion event, but we don't know which chat it belongs to!"
                 )
                 continue
@@ -545,6 +558,21 @@ class Session(BaseSession[int, Recipient]):
                 participant.role = "moderator"
             else:
                 self.log.warning("Unknown participant: %s", tg_participant)
+
+    @catch_peer_id_invalid
+    async def _on_tg_UpdateChannel(
+        self,
+        update: pyro_raw_types.UpdateChannel,
+        _users: dict[int, User],
+        chats: dict[int, pyro_raw_types.Channel],
+    ) -> None:
+        for channel in chats.values():
+            if channel.left:
+                muc = await self.bookmarks.by_legacy_id(
+                    get_channel_id(update.channel_id)
+                )
+                self.tg.message_cache.remove_chat(muc.legacy_id)
+                await self.bookmarks.remove(muc)
 
     async def get_sender(
         self,

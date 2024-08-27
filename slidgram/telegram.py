@@ -268,6 +268,15 @@ class MessageCache(Cache):
     def get_by_message_id(self, message_id: int) -> Message:
         return self._chat_by_message_ids.get(message_id)  # type:ignore
 
+    def remove_chat(self, chat_id: int) -> None:
+        # a bit hacky, but works. maybe perf will be an issue eventually
+        new = {
+            message_id: message
+            for message_id, message in self._chat_by_message_ids.items()
+            if message.chat.id != chat_id
+        }
+        self._chat_by_message_ids = LimitedSizeDict(10_000, new)
+
 
 invalid_user = InvalidUser()
 

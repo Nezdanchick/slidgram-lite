@@ -3,6 +3,7 @@ from io import BytesIO
 from typing import TYPE_CHECKING
 
 from pyrogram.enums import ChatMemberStatus, ChatType
+from pyrogram.errors import UserNotParticipant
 from pyrogram.types import ChatMember, ChatPermissions, ChatPrivileges, Message
 from pyrogram.utils import zero_datetime
 from slidge import global_config
@@ -63,7 +64,10 @@ class Bookmarks(LegacyBookmarks[int, "MUC"]):
                 ):
                     # destroyed groups or groups that have been left
                     continue
-                muc = await self.by_legacy_id(dialog.chat.id)
+                try:
+                    muc = await self.by_legacy_id(dialog.chat.id)
+                except XMPPError:
+                    continue
                 await muc.add_to_bookmarks(auto_join=dialog.chat.type == ChatType.GROUP)
 
 
@@ -81,6 +85,12 @@ class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int
 
     @tg_to_xmpp_errors
     async def update_info(self):
+        try:
+            await self.tg.get_chat_member(self.legacy_id, "me")
+        except UserNotParticipant:
+            raise XMPPError(
+                "subscription-required", "You are not a member of this group."
+            )
         chat = await self.tg.get_chat(self.legacy_id)
 
         self.name = chat.title
