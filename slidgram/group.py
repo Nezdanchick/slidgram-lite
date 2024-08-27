@@ -143,20 +143,7 @@ class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int
         if me is None or me_member is None:
             me = await self.get_user_participant()
             me_member = await self.tg.get_chat_member(self.legacy_id, "me")
-        if me_member.status == ChatMemberStatus.OWNER:
-            me.affiliation = "owner"
-            me.role = "moderator"
-        elif me_member.status == ChatMemberStatus.ADMINISTRATOR:
-            if me_member.privileges.can_change_info:
-                me.affiliation = "owner"
-            else:
-                me.affiliation = "admin"
-            me.role = "moderator"
-        elif (
-            me_member.status == ChatMemberStatus.RESTRICTED
-            and not me_member.permissions.can_send_messages
-        ):
-            me.role = "visitor"
+        me.update_tg_member(me_member)
         yield me
 
     @tg_to_xmpp_errors
@@ -460,7 +447,7 @@ class Participant(TelegramMessageSenderMixin, LegacyParticipant):
             self.role = "moderator"
         elif member.status == ChatMemberStatus.RESTRICTED:
             self.set_hats([Hat("https://slidge.im/slidgram/hats", "restricted")])
-            self.role = "none"
+            self.role = "visitor"
         elif member.status == ChatMemberStatus.LEFT:
             self.leave()
         elif member.status == ChatMemberStatus.BANNED:
