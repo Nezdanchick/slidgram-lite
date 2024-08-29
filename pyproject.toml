@@ -13,8 +13,8 @@ priority = "primary"
 
 [tool.poetry.dependencies]
 python = "^3.11"
-slidge-style-parser = "0.1.6"
-slidge = "^0.2.0a4"
+slidge-style-parser = "^0.1.8"
+slidge = "^0.2.0beta0"
 tgcrypto = "^1.2.5"
 pyrofork = "^2.3.32"
 
