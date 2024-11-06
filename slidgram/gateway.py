@@ -1,10 +1,9 @@
 import logging
-import shutil
 import typing
 
 import sqlalchemy as sa
 from pyrogram import Client
-from pyrogram.errors import SessionPasswordNeeded
+from pyrogram.errors import AuthKeyUnregistered, SessionPasswordNeeded
 from pyrogram.types import User as TGUser
 from slidge import BaseGateway, global_config
 from slidge.command.register import (
@@ -20,7 +19,7 @@ from slixmpp.exceptions import XMPPError
 from . import config, reactions
 
 if typing.TYPE_CHECKING:
-    pass
+    from .session import Session
 
 REGISTRATION_INSTRUCTIONS = (
     "You need to create a telegram account in an official telegram client.\n\nThen you"
@@ -161,11 +160,12 @@ class Gateway(BaseGateway):
             )
 
     async def unregister(self, user: GatewayUser):
-        session = self.session_cls.from_user(user)
-        session.logged = False
-        workdir = session.tg.settings.files_directory.absolute()
-        await session.tg.api.log_out()
-        shutil.rmtree(workdir)
+        session: "Session" = self.get_session_from_user(user)  # type: ignore
+        try:
+            await session.tg.log_out()
+        except (AuthKeyUnregistered, ConnectionError):
+            # can happen when the session is killed from another tg client
+            await session.tg.storage.delete()
 
 
 _clients: dict[str, Client] = {}
