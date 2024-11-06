@@ -30,6 +30,9 @@ class JoinPublicChat(Command):
         if chat_name.startswith("http://"):
             chat_name = "https://" + chat_name[7:]
 
+        # The /s/ part is for web preview of telegram chats and is not accepted by pyrofork's API
+        chat_name = chat_name.replace("https://t.me/s/", "https://t.me/")
+
         chat = await session.tg.join_chat(chat_name)
         muc = await session.bookmarks.by_legacy_id(chat.id)
         return f"You can now join '{chat.title}' at xmpp:{muc.jid}?join"
