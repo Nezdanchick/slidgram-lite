@@ -75,6 +75,22 @@ class Session(BaseSession[int, Recipient]):
     async def logout(self):
         await self.tg.stop()
 
+    # The following three chat states have no equivalent in telegram. if we don't override this
+    # slidge will send a msg/error/feature-not-implemented for clients which actually send
+    # those, such as psi. A lot of clients will just dismiss such errors, but some (again, psi)
+    # will display them. Since chat states are effectively supported for "composing", "paused",
+    # and "active" when the message has a body, it makes sense to not reply "feature-not-implemented",
+    # especially since contacts advertise support for chat states in their disco#features.
+    # This could (maybe should) be improved in slidge core, but this fix is good enough for now.
+    async def on_active(self, *_args, **_kwargs):
+        pass
+
+    async def on_inactive(self, *_args, **_kwargs):
+        pass
+
+    async def on_gone(self, *_args, **_kwargs):
+        pass
+
     @tg_to_xmpp_errors
     async def on_text(
         self,
