@@ -61,6 +61,15 @@ class Session(BaseSession[int, Recipient]):
     def xmpp_to_legacy_msg_id(i: str) -> int:
         return int(i)
 
+    async def on_invalid_key(self) -> None:
+        self.send_gateway_message(
+            "Your telegram session is not valid anymore. "
+            "Maybe you disconnected slidgram from another telegram client? "
+            "Please go through the registration process again."
+        )
+        await self.xmpp.unregister_user(self.user)
+        raise XMPPError("not-authorized", "Your credentials are not valid anymore")
+
     @tg_to_xmpp_errors
     async def login(self):
         await self.tg.start()

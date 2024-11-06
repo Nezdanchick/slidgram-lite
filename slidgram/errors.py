@@ -1,7 +1,8 @@
 import functools
-from typing import Any, Callable, ParamSpec, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, ParamSpec, TypeVar
 
 from pyrogram.errors import (
+    AuthKeyUnregistered,
     BadRequest,
     Forbidden,
     ReactionInvalid,
@@ -12,6 +13,9 @@ from slixmpp.exceptions import XMPPError
 from slixmpp.types import ErrorConditions
 
 from .telegram import InvalidUserException
+
+if TYPE_CHECKING:
+    from .session import Session
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -32,6 +36,9 @@ def tg_to_xmpp_errors(func: WrappedMethod) -> WrappedMethod:
     async def wrapped(*a, **ka):
         try:
             return await func(*a, **ka)
+        except AuthKeyUnregistered:
+            self: "Session" = a[0]
+            await self.on_invalid_key()
         except (RPCError, InvalidUserException) as e:
             _raise(e, func)
 
@@ -44,6 +51,9 @@ def tg_to_xmpp_errors_it(func: WrappedMethod) -> WrappedMethod:
         try:
             async for x in func(*a, **ka):
                 yield x
+        except AuthKeyUnregistered:
+            self: "Session" = a[0]
+            await self.on_invalid_key()
         except (RPCError, InvalidUserException) as e:
             _raise(e, func)
 
