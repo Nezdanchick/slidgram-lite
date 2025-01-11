@@ -1,12 +1,12 @@
 # install dependencies
-FROM docker.io/nicocool84/slidge-builder AS builder
+FROM codeberg.org/slidge/slidge-builder AS builder
 
 COPY poetry.lock pyproject.toml /build/
 RUN poetry export --without-hashes >requirements.txt
 RUN python3 -m pip install --requirement requirements.txt
 
 # main container
-FROM docker.io/nicocool84/slidge-base AS slidgram
+FROM codeberg.org/slidge/slidge-base AS slidgram
 
 USER root
 RUN apt update && \
@@ -19,7 +19,7 @@ COPY --from=builder /venv /venv
 COPY ./slidgram /venv/lib/python/site-packages/legacy_module
 
 # dev container
-FROM docker.io/nicocool84/slidge-dev AS dev
+FROM codeberg.org/slidge/slidge-dev AS dev
 
 RUN apt update && \
     apt install --assume-yes ffmpeg && \
