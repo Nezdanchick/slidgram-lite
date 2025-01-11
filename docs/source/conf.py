@@ -8,7 +8,6 @@ extensions = [
     "sphinx.ext.extlinks",
     "sphinx.ext.viewcode",
     "sphinx.ext.autodoc.typehints",
-    "sphinxarg.ext",
     "autoapi.extension",
     "slidge_dev_helpers.doap",
     "slidge_dev_helpers.sphinx_config_obj",

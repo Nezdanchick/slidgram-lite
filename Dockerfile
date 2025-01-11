@@ -2,9 +2,14 @@
 FROM codeberg.org/slidge/slidge-builder AS builder
 
 COPY uv.lock pyproject.toml /build/
-
 RUN uv export --no-dev > requirements.txt
 RUN uv venv /venv/
+RUN uv pip install --requirement requirements.txt
+
+# ci container
+FROM codeberg.org/slidge/woodpecker-slidge AS woodpecker-slidgram
+
+RUN uv export > requirements.txt
 RUN uv pip install --requirement requirements.txt
 
 # main container

@@ -59,14 +59,26 @@ skip = [
 [tool.uv.sources]
 slidge-dev-helpers = { git = "https://git.sr.ht/~nicoco/slidge-dev-helpers" }
 
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple"
+
+[[tool.uv.index]]
+name = "codeberg"
+url = "https://codeberg.org/api/packages/slidge/pypi/simple"
+publish-url = "https://codeberg.org/api/packages/slidge/pypi"
+
 [dependency-groups]
 dev = [
     "black[d]>=24.10.0",
+    "furo>=2024.8.6",
     "isort>=5.13.2",
     "mypy>=1.14.1",
     "pytest>=8.3.4",
     "ruff>=0.9.1",
     "slidge-dev-helpers",
+    "sphinx-autoapi>=3.4.0",
+    "sphinx-mdinclude>=0.6.2",
     "xmldiff>=2.7.0",
 ]
 

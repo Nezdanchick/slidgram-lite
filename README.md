@@ -1,11 +1,5 @@
 # slidgram
 
-[Home](https://sr.ht/~nicoco/slidge) |
-[Docs](https://slidge.im/slidgram) |
-[Issues](https://todo.sr.ht/~nicoco/slidgram) |
-[Patches](https://lists.sr.ht/~nicoco/public-inbox) |
-[Chat](xmpp:slidge@conference.nicoco.fr?join)
-
 A
 [feature-rich](https://slidge.im/slidgram/features.html)
 [Telegram](https://telegram.org) to
@@ -14,9 +8,9 @@ A
 [slidge](https://slidge.im) and
 [Pyrofork](https://pyrofork.mayuri.my.id/main/).
 
-[![builds.sr.ht status](https://builds.sr.ht/~nicoco/slidgram/commits/master/ci.yml.svg)](https://builds.sr.ht/~nicoco/slidgram/commits/master/ci.yml)
-[![containers status](https://builds.sr.ht/~nicoco/slidgram/commits/master/container.yml.svg)](https://builds.sr.ht/~nicoco/slidgram/commits/master/container.yml)
-[![pypi status](https://badge.fury.io/py/slidgram.svg)](https://pypi.org/project/slidgram/)
+[![PyPI package version](https://badge.fury.io/py/slidgram.svg)](https://pypi.org/project/slidgram/)
+[![CI pipeline status](https://ci.codeberg.org/api/badges/14064/status.svg)](https://ci.codeberg.org/repos/14064)
+[![Chat](https://conference.nicoco.fr:5281/muc_badge/slidge@conference.nicoco.fr)](https://conference.nicoco.fr:5281/muc_log/slidge/)
 
 ## Installation
 
@@ -25,10 +19,10 @@ for general info on how to set up an XMPP server component.
 
 ### Containers
 
-From [dockerhub](https://hub.docker.com/r/nicocool84/slidgram)
+From [codeberg](https://codeberg.org/slidge/-/packages/container/slidgram):
 
 ```sh
-docker run docker.io/nicocool84/slidgram
+docker run codeberg.org/slidge/slidgram  # replace docker with podman for extra coolness
 ```
 
 ### Python package
@@ -42,23 +36,27 @@ pipx install slidgram
 
 # for the bleeding edge
 pipx install slidgram==0.0.0.dev0 \
-    --pip-args='--extra-index-url https://slidge.im/repo'
+    --pip-args='--extra-index-url https://codeberg.org/api/packages/slidge/pypi/simple/'
 
 # to update bleeding edge installs
 pipx install slidgram==0.0.0.dev0 \
-    --pip-args='--extra-index-url https://slidge.im/repo' --force
+    --pip-args='--extra-index-url https://codeberg.org/api/packages/slidge/pypi/simple/' --force
 
 slidgram --help
 ```
 
+## Documentation
+
+Hosted on [codeberg pages](https://slidge.codeberg.page/docs/slidgram/dev/).
+
 ## Dev
 
 ```sh
-git clone https://git.sr.ht/~nicoco/slidgram
+git clone https://codeberg.org/slidge/slidgram
 cd slidgram
-docker-compose up
+docker-compose up  # podman-compose works too!
 ```
 
 ## Similar project
 
-https://dev.narayana.im/narayana/telegabber/
+[Telegabber](https://dev.narayana.im/narayana/telegabber/), similar project written in go.
