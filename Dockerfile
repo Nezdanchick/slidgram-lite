@@ -1,9 +1,11 @@
 # install dependencies
 FROM codeberg.org/slidge/slidge-builder AS builder
 
-COPY poetry.lock pyproject.toml /build/
-RUN poetry export --without-hashes >requirements.txt
-RUN python3 -m pip install --requirement requirements.txt
+COPY uv.lock pyproject.toml /build/
+
+RUN uv export --no-dev > requirements.txt
+RUN uv venv /venv/
+RUN uv pip install --requirement requirements.txt
 
 # main container
 FROM codeberg.org/slidge/slidge-base AS slidgram
