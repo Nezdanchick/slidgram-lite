@@ -16,9 +16,9 @@ from pyrogram.raw.types import (
     PeerUser,
     ReactionCustomEmoji,
     ReactionEmoji,
+    UserEmpty,
 )
 from pyrogram.raw.types import User as RawUser
-from pyrogram.raw.types import UserEmpty
 from pyrogram.raw.types.messages import AvailableReactions
 from pyrogram.types import Chat, Message, Update, User
 from slidge import global_config
