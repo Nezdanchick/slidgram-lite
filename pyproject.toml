@@ -50,7 +50,7 @@ exclude = ["tests"]
 select = ["I"]
 
 [tool.uv.sources]
-slidge-dev-helpers = { git = "https://git.sr.ht/~nicoco/slidge-dev-helpers" }
+slidge-sphinx-extensions = { index = "codeberg" }
 
 [[tool.uv.index]]
 name = "pypi"
@@ -67,7 +67,7 @@ dev = [
     "mypy>=1.14.1",
     "pytest>=8.3.4",
     "ruff>=0.9.1",
-    "slidge-dev-helpers",
+    "slidge-sphinx-extensions>=0.1.0",
     "sphinx-autoapi>=3.4.0",
     "sphinx-mdinclude>=0.6.2",
     "xmldiff>=2.7.0",

@@ -9,8 +9,8 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.autodoc.typehints",
     "autoapi.extension",
-    "slidge_dev_helpers.doap",
-    "slidge_dev_helpers.sphinx_config_obj",
+    "slidge_sphinx_extensions.doap",
+    "slidge_sphinx_extensions.config_obj",
     "sphinx_mdinclude",
 ]
 
