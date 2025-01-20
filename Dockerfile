@@ -7,10 +7,10 @@ RUN uv venv /venv/
 RUN uv pip install --requirement requirements.txt
 
 # ci container
-FROM codeberg.org/slidge/slidge-builder AS woodpecker-slidgram
-
-RUN uv export > requirements.txt
-RUN uv pip install --requirement requirements.txt
+FROM builder AS woodpecker-slidgram
+# In CI we copy /venv to .venv, then update it for the whole workflow.
+ENV PATH=".venv/bin:$PATH"
+RUN uv sync --dev --all-extras
 
 # main container
 FROM codeberg.org/slidge/slidge-base AS slidgram
