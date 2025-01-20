@@ -38,23 +38,16 @@ include = ["slidgram*"]
 
 [tool.mypy]
 files = ["slidgram"]
-exclude = [
-    "tests",
-]
+exclude = ["tests"]
 check_untyped_defs = true
 strict = false
 
 [tool.ruff]
-line-length = 120
-exclude = [
-    "tests",
-]
+line-length = 88
+exclude = ["tests"]
 
-[tool.isort]
-profile = "black"
-skip = [
-    "tests",
-]
+[tool.ruff.lint]
+select = ["I"]
 
 [tool.uv.sources]
 slidge-dev-helpers = { git = "https://git.sr.ht/~nicoco/slidge-dev-helpers" }
@@ -70,9 +63,7 @@ publish-url = "https://codeberg.org/api/packages/slidge/pypi"
 
 [dependency-groups]
 dev = [
-    "black[d]>=24.10.0",
     "furo>=2024.8.6",
-    "isort>=5.13.2",
     "mypy>=1.14.1",
     "pytest>=8.3.4",
     "ruff>=0.9.1",

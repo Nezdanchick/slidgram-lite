@@ -6,27 +6,23 @@ variables:
   - &image codeberg.org/slidge/woodpecker-${CI_REPO_NAME}
 
 steps:
-  # This is often a no-op, but since we build the woodpecker-ci images manually,
-  # their venv may be out of date, even if uv.lock is not modified.
   update-venv:
     image: *image
-    pull: true
     commands:
       - cp -r /venv .venv
       - uv venv --allow-existing .venv
       - uv export > req.txt
       - uv pip install --requirements req.txt
 
-  style:
-    image: *image
-    commands:
-      - black --check ${CI_REPO_NAME}
-      - isort --check ${CI_REPO_NAME}
-
-  static-check:
+  ruff:
     image: *image
     commands:
       - ruff check
+      - ruff format
+
+  mypy:
+    image: *image
+    commands:
       - mypy
 
   test:
