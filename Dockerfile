@@ -7,7 +7,7 @@ RUN uv venv /venv/
 RUN uv pip install --requirement requirements.txt
 
 # ci container
-FROM codeberg.org/slidge/woodpecker-slidge AS woodpecker-slidgram
+FROM codeberg.org/slidge/slidge-builder AS woodpecker-slidgram
 
 RUN uv export > requirements.txt
 RUN uv pip install --requirement requirements.txt
@@ -21,7 +21,7 @@ RUN apt update && \
     rm -rf /var/lib/apt/lists/*
 USER slidge
 
-COPY --from=docker.io/nicocool84/slidge-lottie /lottie-converter/* /usr/bin/
+COPY --from=codeberg.org/slidge/lottie-converter /lottie-converter/* /usr/bin/
 COPY --from=builder /venv /venv
 COPY ./slidgram /venv/lib/python/site-packages/legacy_module
 
@@ -32,5 +32,5 @@ RUN apt update && \
     apt install --assume-yes ffmpeg && \
     rm -rf /var/lib/apt/lists/*
 
-COPY --from=docker.io/nicocool84/slidge-lottie /lottie-converter/* /usr/bin/
+COPY --from=codeberg.org/slidge/lottie-converter /lottie-converter/* /usr/bin/
 COPY --from=builder /venv /venv
