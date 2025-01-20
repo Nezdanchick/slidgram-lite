@@ -13,6 +13,9 @@ steps:
   version:
     image: codeberg.org/slidge/woodpecker-version
 
+  changelog:
+    image: codeberg.org/slidge/woodpecker-generate-changelog
+
   build:
     image: *image
     commands:
@@ -45,3 +48,4 @@ steps:
         - dist/${CI_REPO_NAME}*
       CODEBERG_TOKEN:
         from_secret: CODEBERG_TOKEN
+      note: CHANGELOG
