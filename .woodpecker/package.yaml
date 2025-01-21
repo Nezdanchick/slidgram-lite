@@ -1,6 +1,6 @@
 when:
   event: [ push, tag, pull_request ]
-  path: [ "slidge/**/*", "pyproject.toml", "uv.lock", "README.md" ]
+  path: [ "${CI_REPO_NAME}/**/*", "pyproject.toml", "uv.lock", "README.md" ]
 
 variables:
   - &image codeberg.org/slidge/woodpecker-${CI_REPO_NAME}

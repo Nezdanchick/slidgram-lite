@@ -1,6 +1,6 @@
 when:
   event: [ push, tag, pull_request ]
-  path: [ "slidge/**/*.py", "superduper/**/*.py", "docs/**/*" ]
+  path: [ "${CI_REPO_NAME}/**/*.py", "superduper/**/*.py", "docs/**/*" ]
 
 steps:
   build:
