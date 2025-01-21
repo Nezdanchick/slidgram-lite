@@ -1,6 +1,9 @@
+from datetime import datetime
+from pathlib import Path
+
 project = "slidgram"
-copyright = "2023, nicoco"
-author = "nicoco"
+copyright = f"{datetime.today().year}, the {project} contributors"
+author = "the slidge contributors"
 
 extensions = [
     "sphinx.ext.autodoc",
@@ -32,3 +35,14 @@ intersphinx_mapping = {
 extlinks = {"xep": ("https://xmpp.org/extensions/xep-%s.html", "XEP-%s")}
 
 html_theme = "furo"
+html_theme_options = {
+    "source_edit_link": f"https://codeberg.org/slidge/{project}/_edit/main/docs/source/{{filename}}",
+    "source_view_link": f"https://codeberg.org/slidge/{project}/src/branch/main/docs/source/{{filename}}",
+    "footer_icons": [
+        {
+            "name": "Codeberg",
+            "url": f"https://codeberg.org/slidge/{project}",
+            "html": Path("codeberg.svg").read_text(),
+        },
+    ],
+}
