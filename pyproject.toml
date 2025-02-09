@@ -24,7 +24,7 @@ Homepage = "https://codeberg.org/slidge/slidgram"
 Issues = "https://codeberg.org/slidge/slidgram/issues"
 Repository = "https://codeberg.org/slidge/slidgram"
 "Chat room" = "https://conference.nicoco.fr:5281/muc_log/slidge/"
-Documentation = "https://slidge.codeberg.page/docs/slidgram/main"
+Documentation = "https://slidge.im/docs/slidgram/main"
 
 [project.scripts]
 slidge = 'slidgram:main'

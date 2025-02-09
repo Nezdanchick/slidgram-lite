@@ -4,7 +4,6 @@ User docs
 .. note::
   Telegram is OK with alternative clients, so as long as you're not doing evil stuff, using slidge
   to interact with the telegram network is fine.
-  The plugin uses telegram's official `TDLib <https://tdlib.github.io/td/>`_.
 
 Roster
 ******
