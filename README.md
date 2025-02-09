@@ -1,7 +1,7 @@
 # slidgram
 
 A
-[feature-rich](https://slidge.im/slidgram/features.html)
+[feature-rich](https://slidge.im/docs/slidgram/main/features.html)
 [Telegram](https://telegram.org) to
 [XMPP](https://xmpp.org/) puppeteering
 [gateway](https://xmpp.org/extensions/xep-0100.html), based on
@@ -47,7 +47,7 @@ slidgram --help
 
 ## Documentation
 
-Hosted on [codeberg pages](https://slidge.codeberg.page/docs/slidgram/dev/).
+Hosted on [codeberg pages](https://slidge.im/docs/slidgram/main/).
 
 ## Dev
 

@@ -2,7 +2,7 @@ slidgram
 ========
 
 A
-`feature-rich <https://slidge.im/slidgram/features.html>`_
+`feature-rich <https://slidge.im/docs/slidgram/main/features.html>`_
 `Telegram <https://telegram.org>`_ to
 `XMPP <https://xmpp.org/>`_ puppeteering
 `gateway <https://xmpp.org/extensions/xep-0100.html>`_, based on
