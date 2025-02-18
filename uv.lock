@@ -1181,7 +1181,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "pyrofork", specifier = ">=2.3.55" },
+    { name = "pyrofork", specifier = ">=2.3.55,<2.4" },
     { name = "slidge", specifier = ">=0.2.3" },
     { name = "slidge-style-parser", specifier = ">=0.1.8" },
     { name = "tgcrypto", specifier = ">=1.2.5" },
