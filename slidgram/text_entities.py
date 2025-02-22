@@ -2,6 +2,8 @@
 Converts telegram formatted text to XEP-0393 (message styling) strings.
 """
 
+import logging
+
 from pyrogram.enums import MessageEntityType
 from pyrogram.types import MessageEntity
 from slidge.util.types import Mention
@@ -31,19 +33,30 @@ def entities_to_xep_0393(
     #
     # # the split similar entities are not guaranteed to be consecutive,
     # # so we first regroup by ID
-    #
-    # entities = sorted(entities, key=lambda x: x.of.ID)
 
-    # then we merge and sort by offset because our converter requires that
-    entities = sorted(merge_consecutive_entities(entities), key=lambda x: x.offset)
+    try:
+        # then we merge and sort by offset because our converter requires that
+        entities = sorted(merge_consecutive_entities(entities), key=lambda x: x.offset)
 
-    text_utf16 = text.encode("utf-16-le")
-    for e in entities:
-        e.offset *= 2
-        e.length *= 2
-    res_utf16 = entities_to_xep_0393_utf_16(text_utf16, entities, user_id, user_nick)
+        text_utf16 = text.encode("utf-16-le")
+        for e in entities:
+            e.offset *= 2
+            e.length *= 2
+        res_utf16 = entities_to_xep_0393_utf_16(
+            text_utf16, entities, user_id, user_nick
+        )
 
-    return res_utf16.decode("utf-16-le")
+        return res_utf16.decode("utf-16-le")
+    except Exception as e:
+        # let's log it all so we understand why this sometimes happen
+        log.exception(
+            "Conversion of '%s' with entities '%s' to message styling failed, "
+            "falling back to basic text content.",
+            text,
+            entities,
+            exc_info=e,
+        )
+        return text
 
 
 def entities_to_xep_0393_utf_16(
@@ -189,3 +202,5 @@ PARSER_TO_ENTITY = {
     "strikethrough": MessageEntityType.STRIKETHROUGH,
     "spoiler": MessageEntityType.SPOILER,
 }
+
+log = logging.getLogger(__name__)
