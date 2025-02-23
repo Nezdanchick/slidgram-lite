@@ -77,6 +77,10 @@ dev = [
 # https://github.com/astral-sh/uv/issues/9513#issuecomment-2519527822
 license-files = []
 
+[tool.git-cliff.remote.gitea]
+owner = "slidge"
+repo = "slidgram"
+
 [tool.git-cliff.changelog]
 header = """
 <!-- write something cool about the release here! -->
