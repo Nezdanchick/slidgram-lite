@@ -19,6 +19,7 @@ from pyrogram.types import (
 )
 from slidge.core.mixins.message import ContentMessageMixin
 from slidge.util.types import LinkPreview, MessageReference
+from slixmpp.exceptions import XMPPError
 
 from . import config
 from .telegram import handle_flood
@@ -216,12 +217,26 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
                 author = "user"
             else:
                 if message.chat.type in (ChatType.PRIVATE, ChatType.BOT):
-                    author = await self.contacts.by_legacy_id(message.from_user.id)
+                    try:
+                        author = await self.contacts.by_legacy_id(message.from_user.id)
+                    except XMPPError as e:
+                        # deleted/banned user?
+                        if e.condition == "item-not-found":
+                            author = None
+                        else:
+                            raise
                 else:
                     muc = await self.bookmarks.by_legacy_id(message.chat.id)
-                    author = await muc.get_participant_by_legacy_id(
-                        message.from_user.id
-                    )
+                    try:
+                        author = await muc.get_participant_by_legacy_id(
+                            message.from_user.id
+                        )
+                    except XMPPError as e:
+                        # deleted/banned user?
+                        if e.condition == "item-not-found":
+                            author = None
+                        else:
+                            raise
         elif message.sender_chat is not None or message.chat.type == ChatType.CHANNEL:
             muc = await self.bookmarks.by_legacy_id(message.chat.id)
             author = muc.get_system_participant()
