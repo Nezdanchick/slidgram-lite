@@ -75,6 +75,22 @@ def catch_peer_id_invalid(func: WrappedMethod) -> WrappedMethod:
     return wrapped
 
 
+def silence_peer_id_invalid(func: WrappedMethod) -> WrappedMethod:
+    @functools.wraps(func)
+    async def wrapped(self, *a, **ka):
+        try:
+            return await func(self, *a, **ka)
+        except XMPPError as e:
+            if e.condition == "item-not-found":
+                return
+            else:
+                self.log.error(
+                    "%r in %s called with %s and %s", e.text, func.__name__, a, ka
+                )
+
+    return wrapped
+
+
 def _raise(e: RPCError | InvalidUserException, func: WrappedMethod):
     condition = _ERROR_MAP.get(type(e), "internal-server-error")
     raise XMPPError(

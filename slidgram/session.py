@@ -27,7 +27,7 @@ from slidge.util.types import Mention, RecipientType, Sticker
 from slixmpp.exceptions import XMPPError
 
 from .contact import Contact
-from .errors import catch_peer_id_invalid, tg_to_xmpp_errors
+from .errors import catch_peer_id_invalid, silence_peer_id_invalid, tg_to_xmpp_errors
 from .gateway import Gateway
 from .group import MUC, Bookmarks, Participant
 from .telegram import Client as TelegramClient
@@ -486,14 +486,14 @@ class Session(BaseSession[int, Recipient]):
         except Exception as e:
             self.log.exception("Exception raised in %s: %s", handler, e, exc_info=e)
 
-    @catch_peer_id_invalid
+    @silence_peer_id_invalid
     async def _on_tg_UpdateUserTyping(
         self, update: pyro_raw_types.UpdateUserTyping, _users, _chats
     ) -> None:
         actor = await self.contacts.by_legacy_id(update.user_id)
         self._send_action(actor, update.action)
 
-    @catch_peer_id_invalid
+    @silence_peer_id_invalid
     async def _on_tg_UpdateChatUserTyping(
         self, update: pyro_raw_types.UpdateChatUserTyping, _users, _chats
     ) -> None:
@@ -505,11 +505,10 @@ class Session(BaseSession[int, Recipient]):
             return
         self._send_action(actor, update.action)
 
-    @catch_peer_id_invalid
+    @silence_peer_id_invalid
     async def _on_tg_UpdateChannelUserTyping(
         self, update: pyro_raw_types.UpdateChannelUserTyping, _users, _chats
     ) -> None:
-        # TESTME
         muc = await self.bookmarks.by_legacy_id(get_channel_id(update.channel_id))
         if isinstance(update.from_id, pyro_raw_types.PeerUser):
             actor = await muc.get_participant_by_legacy_id(update.from_id.user_id)
