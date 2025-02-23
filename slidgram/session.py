@@ -393,6 +393,9 @@ class Session(BaseSession[int, Recipient]):
 
     @catch_peer_id_invalid
     async def _on_tg_msg(self, _tg: TelegramClient, message: Message) -> None:
+        if message.chat is not None and self.tg.is_me(message.chat.id):
+            # slidge voluntarily does not support messages to self through the legacy network
+            return
         sender, carbon = await self.get_sender(message)
         # TODO: use pyrogram's filters, eg:
         #  https://pyrofork.mayuri.my.id/main/api/filters.html#pyrogram.filters.left_chat_member
@@ -536,6 +539,11 @@ class Session(BaseSession[int, Recipient]):
     async def _on_tg_UpdateReadHistoryInbox(
         self, update: pyro_raw_types.UpdateReadHistoryInbox, _users, _chats: list[Chat]
     ) -> None:
+        if isinstance(update.peer, pyro_raw_types.PeerUser) and self.tg.is_me(
+            update.peer.user_id
+        ):
+            # self-message through telegram are not supported
+            return
         actor = await self._get_actor_by_peer(update.peer, user=True)
         actor.displayed(update.max_id, carbon=True)
 
