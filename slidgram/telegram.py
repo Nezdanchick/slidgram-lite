@@ -177,7 +177,7 @@ class Client(TelegramClient):
         async with self._get_user_lock:
             cached_raw = self._user_cache.get(user_id)
             if cached_raw is invalid_user:
-                raise InvalidUserException(user_id)
+                raise InvalidUserException(f"{user_id} was cached and is invalid")
             if cached_raw is not None:
                 self.log.debug("user was cached! YAY!")
                 # noinspection PyProtectedMember
@@ -190,7 +190,7 @@ class Client(TelegramClient):
         except PeerIdInvalid:
             self._user_cache[user_id] = invalid_user
             self.log.debug("user %s could not be resolved", user_id)
-            raise InvalidUserException(user_id)
+            raise InvalidUserException(f"{user_id} raised PeerIdInvalid")
         assert isinstance(user, User)
         return user
 
