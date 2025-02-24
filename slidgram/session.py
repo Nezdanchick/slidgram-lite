@@ -27,7 +27,11 @@ from slidge.util.types import Mention, RecipientType, Sticker
 from slixmpp.exceptions import XMPPError
 
 from .contact import Contact
-from .errors import catch_peer_id_invalid, silence_peer_id_invalid, tg_to_xmpp_errors
+from .errors import (
+    ignore_event_on_peer_id_invalid,
+    log_error_on_peer_id_invalid,
+    tg_to_xmpp_errors,
+)
 from .gateway import Gateway
 from .group import MUC, Bookmarks, Participant
 from .telegram import Client as TelegramClient
@@ -391,7 +395,7 @@ class Session(BaseSession[int, Recipient]):
     async def on_leave_group(self, chat_id: int):
         await self.tg.leave_chat(chat_id)
 
-    @catch_peer_id_invalid
+    @log_error_on_peer_id_invalid
     async def _on_tg_msg(self, _tg: TelegramClient, message: Message) -> None:
         if message.chat is not None and self.tg.is_me(message.chat.id):
             # slidge voluntarily does not support messages to self through the legacy network
@@ -412,7 +416,7 @@ class Session(BaseSession[int, Recipient]):
             return
         await sender.send_tg_msg(message, carbon=carbon)
 
-    @catch_peer_id_invalid
+    @log_error_on_peer_id_invalid
     async def _on_tg_edit(self, _tg: TelegramClient, message: Message) -> None:
         if message.edit_hide:
             return
@@ -420,14 +424,14 @@ class Session(BaseSession[int, Recipient]):
         sender, carbon = await self.get_sender(message)
         await sender.send_tg_msg(message, carbon=carbon, correction=True)
 
-    @catch_peer_id_invalid
+    @ignore_event_on_peer_id_invalid
     async def _on_tg_status(self, _tg: TelegramClient, user: User) -> None:
         if self.tg.is_me(user):
             return
         contact = await self.contacts.by_legacy_id(user.id)
         contact.update_tg_status(user)
 
-    @catch_peer_id_invalid
+    @log_error_on_peer_id_invalid
     async def _on_tg_chat_member(self, _tg, update: ChatMemberUpdated):
         muc = await self.bookmarks.by_legacy_id(update.chat.id)
         part = await muc.get_participant_by_legacy_id(update.new_chat_member.user.id)
@@ -436,7 +440,7 @@ class Session(BaseSession[int, Recipient]):
     # this is a handler for a custom event we added to our pyrogram.Client
     # subclass.
 
-    @catch_peer_id_invalid
+    @ignore_event_on_peer_id_invalid
     async def _on_tg_reaction(
         self, message: Message, user_id: int, emoji: str | None
     ) -> None:
@@ -455,7 +459,7 @@ class Session(BaseSession[int, Recipient]):
         participant = await muc.get_participant_by_legacy_id(user_id)
         participant.react(message.id, emojis)
 
-    @catch_peer_id_invalid
+    @ignore_event_on_peer_id_invalid
     async def _on_tg_deleted_msg(self, _tg, messages: list[Message]) -> None:
         for message in messages:
             msg_id = message.id
@@ -486,14 +490,14 @@ class Session(BaseSession[int, Recipient]):
         except Exception as e:
             self.log.exception("Exception raised in %s: %s", handler, e, exc_info=e)
 
-    @silence_peer_id_invalid
+    @ignore_event_on_peer_id_invalid
     async def _on_tg_UpdateUserTyping(
         self, update: pyro_raw_types.UpdateUserTyping, _users, _chats
     ) -> None:
         actor = await self.contacts.by_legacy_id(update.user_id)
         self._send_action(actor, update.action)
 
-    @silence_peer_id_invalid
+    @ignore_event_on_peer_id_invalid
     async def _on_tg_UpdateChatUserTyping(
         self, update: pyro_raw_types.UpdateChatUserTyping, _users, _chats
     ) -> None:
@@ -505,7 +509,7 @@ class Session(BaseSession[int, Recipient]):
             return
         self._send_action(actor, update.action)
 
-    @silence_peer_id_invalid
+    @ignore_event_on_peer_id_invalid
     async def _on_tg_UpdateChannelUserTyping(
         self, update: pyro_raw_types.UpdateChannelUserTyping, _users, _chats
     ) -> None:
@@ -527,14 +531,14 @@ class Session(BaseSession[int, Recipient]):
         else:
             self.log.warning("Unknown action: %s for %s", action, actor)
 
-    @catch_peer_id_invalid
+    @ignore_event_on_peer_id_invalid
     async def _on_tg_UpdateReadHistoryOutbox(
         self, update: pyro_raw_types.UpdateReadHistoryOutbox, _users, _chats
     ) -> None:
         actor = await self._get_actor_by_peer(update.peer)
         actor.displayed(update.max_id)
 
-    @catch_peer_id_invalid
+    @ignore_event_on_peer_id_invalid
     async def _on_tg_UpdateReadHistoryInbox(
         self, update: pyro_raw_types.UpdateReadHistoryInbox, _users, _chats: list[Chat]
     ) -> None:
@@ -546,7 +550,7 @@ class Session(BaseSession[int, Recipient]):
         actor = await self._get_actor_by_peer(update.peer, user=True)
         actor.displayed(update.max_id, carbon=True)
 
-    @catch_peer_id_invalid
+    @ignore_event_on_peer_id_invalid
     async def _on_tg_UpdateReadChannelInbox(
         self, update: pyro_raw_types.UpdateReadChannelInbox, _users, _chats
     ) -> None:
@@ -554,7 +558,7 @@ class Session(BaseSession[int, Recipient]):
         part = await muc.get_user_participant()
         part.displayed(update.max_id)
 
-    @catch_peer_id_invalid
+    @log_error_on_peer_id_invalid
     async def _on_tg_UpdatePinnedMessages(
         self, update: pyro_raw_types.UpdatePinnedMessages, _users, _chats
     ) -> None:
@@ -564,7 +568,7 @@ class Session(BaseSession[int, Recipient]):
 
         await muc.set_tg_pinned_message_ids(update.messages, update.pinned)
 
-    @catch_peer_id_invalid
+    @log_error_on_peer_id_invalid
     async def _on_tg_UpdateChatParticipants(
         self,
         update: pyro_raw_types.UpdateChatParticipants,
@@ -591,7 +595,7 @@ class Session(BaseSession[int, Recipient]):
             else:
                 self.log.warning("Unknown participant: %s", tg_participant)
 
-    @catch_peer_id_invalid
+    @log_error_on_peer_id_invalid
     async def _on_tg_UpdateChannel(
         self,
         update: pyro_raw_types.UpdateChannel,

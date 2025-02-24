@@ -60,7 +60,21 @@ def tg_to_xmpp_errors_it(func: WrappedMethod) -> WrappedMethod:
     return wrapped
 
 
-def catch_peer_id_invalid(func: WrappedMethod) -> WrappedMethod:
+def log_error_on_peer_id_invalid(func: WrappedMethod) -> WrappedMethod:
+    """
+    Decorator to log an error when a telegram event is ignored because of a
+    PeerIdInvalid error. Unfortunately, because of slidge's design, if a telegram
+    profile cannot be fetched, we need to raise an XMPPError to prevent filling the
+    LegacyRoster with invalid user IDs.
+    Ideally, we would need to let events propagate to XMPP even if the profile cannot
+    be fetched, but this would require some serious refactoring in slidge core. It is
+    not even clear whether this is actually achievable, how would we discriminate
+    between "bogus user IDs" and "deleted accounts" since telegram does not explicitly
+    make the difference?
+    Part of the issue is related to MUCs, where we *need* a nickname and not just a user
+    ID to translate a telegram event.
+    """
+
     @functools.wraps(func)
     async def wrapped(self, *a, **ka):
         try:
@@ -75,7 +89,14 @@ def catch_peer_id_invalid(func: WrappedMethod) -> WrappedMethod:
     return wrapped
 
 
-def silence_peer_id_invalid(func: WrappedMethod) -> WrappedMethod:
+def ignore_event_on_peer_id_invalid(func: WrappedMethod) -> WrappedMethod:
+    """
+    Decorator to silently drop telegram events related to PeerIdInvalid errors.
+    This seems to be related to deleted telegram accounts. In some situations, we do not
+    even want to log an error when this happens, eg, for message deletion events or
+    cached reactions from deleted accounts, since consequences are negligible.
+    """
+
     @functools.wraps(func)
     async def wrapped(self, *a, **ka):
         try:
