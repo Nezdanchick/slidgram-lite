@@ -83,8 +83,6 @@ def log_error_on_peer_id_invalid(func: WrappedMethod) -> WrappedMethod:
             self.log.error(
                 "%r in %s called with %s and %s", e.text, func.__name__, a, ka
             )
-        except InvalidUserException as e:
-            self.log.error("Couldn't find user", e.args[0], func.__name__, a, ka)
 
     return wrapped
 
