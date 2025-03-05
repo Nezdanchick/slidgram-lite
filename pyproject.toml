@@ -27,7 +27,7 @@ Repository = "https://codeberg.org/slidge/slidgram"
 Documentation = "https://slidge.im/docs/slidgram/main"
 
 [project.scripts]
-slidge = 'slidgram:main'
+slidgram = 'slidgram:main'
 
 [build-system]
 requires = ["setuptools", "setuptools-scm"]
