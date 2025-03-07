@@ -153,7 +153,7 @@ class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int
         before: HoleBound | None = None,
     ):
         now = datetime.now()
-        self.log.info("Fetching history between %s and %s", after, before)
+        self.log.debug("Fetching history between %s and %s", after, before)
         it = self.tg.get_chat_history(
             chat_id=self.legacy_id,
             limit=0,
