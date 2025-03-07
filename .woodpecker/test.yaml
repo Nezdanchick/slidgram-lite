@@ -19,7 +19,7 @@ steps:
     image: *image
     commands:
       - ruff check
-      - ruff format
+      - ruff format --check
 
   mypy:
     image: *image
