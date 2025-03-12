@@ -494,6 +494,19 @@ class Session(BaseSession[int, Recipient]):
         except Exception as e:
             self.log.exception("Exception raised in %s: %s", handler, e, exc_info=e)
 
+    async def _on_tg_UpdateDialogPinned(
+        self, update: pyro_raw_types.UpdateDialogPinned, _users, chats
+    ) -> None:
+        if isinstance(update.peer, pyro_raw_types.DialogPeerFolder):
+            # TODO: investigate what that is
+            return
+
+        muc = await self._get_muc_by_peer(update.peer.peer)
+        if muc is None:
+            return
+
+        await muc.add_to_bookmarks(pin=update.pinned)
+
     @ignore_event_on_peer_id_invalid
     async def _on_tg_UpdateUserTyping(
         self, update: pyro_raw_types.UpdateUserTyping, _users, _chats
@@ -655,7 +668,7 @@ class Session(BaseSession[int, Recipient]):
             return None
         if isinstance(peer, pyro_raw_types.PeerChat):
             return await self.bookmarks.by_legacy_id(-peer.chat_id)
-        if isinstance(peer, PeerChannel):
+        if isinstance(peer, (PeerChannel, pyro_raw_types.PeerChannel)):
             return await self.bookmarks.by_legacy_id(get_channel_id(peer.channel_id))
         return None
 

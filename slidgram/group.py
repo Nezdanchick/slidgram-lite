@@ -68,7 +68,9 @@ class Bookmarks(LegacyBookmarks[int, "MUC"]):
                     muc = await self.by_legacy_id(dialog.chat.id)
                 except XMPPError:
                     continue
-                await muc.add_to_bookmarks(auto_join=dialog.chat.type == ChatType.GROUP)
+                await muc.add_to_bookmarks(
+                    auto_join=dialog.chat.type == ChatType.GROUP, pin=dialog.is_pinned
+                )
 
 
 class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int]):
