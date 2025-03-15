@@ -10,7 +10,8 @@ A
 
 [![PyPI package version](https://badge.fury.io/py/slidgram.svg)](https://pypi.org/project/slidgram/)
 [![CI pipeline status](https://ci.codeberg.org/api/badges/14064/status.svg)](https://ci.codeberg.org/repos/14064)
-[![Chat](https://conference.nicoco.fr:5281/muc_badge/slidge@conference.nicoco.fr)](https://conference.nicoco.fr:5281/muc_log/slidge/)
+[![Chat](https://conference.nicoco.fr:5281/muc_badge/slidge@conference.nicoco.fr)](https://slidge.im/xmpp-web/#/guest?join=slidge@conference.nicoco.fr)
+
 
 ## Installation
 
@@ -19,10 +20,10 @@ for general info on how to set up an XMPP server component.
 
 ### Containers
 
-From [codeberg](https://codeberg.org/slidge/-/packages/container/slidgram):
+From [the codeberg package registry](https://codeberg.org/slidge/-/packages/container/slidgram/latest)
 
 ```sh
-docker run codeberg.org/slidge/slidgram  # replace docker with podman for extra coolness
+docker run codeberg.org/slidge/slidgram  # works with podman too
 ```
 
 ### Python package
@@ -54,7 +55,7 @@ Hosted on [codeberg pages](https://slidge.im/docs/slidgram/main/).
 ```sh
 git clone https://codeberg.org/slidge/slidgram
 cd slidgram
-docker-compose up  # podman-compose works too!
+docker-compose up  # works with podman-compose too
 ```
 
 ## Similar project

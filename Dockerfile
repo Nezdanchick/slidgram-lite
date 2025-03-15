@@ -3,7 +3,7 @@ FROM codeberg.org/slidge/slidge-builder AS builder
 
 COPY uv.lock pyproject.toml /build/
 RUN uv export --no-dev > requirements.txt
-RUN uv venv /venv/
+RUN uv venv /venv/ --relocatable
 RUN uv pip install --requirement requirements.txt
 
 # ci container

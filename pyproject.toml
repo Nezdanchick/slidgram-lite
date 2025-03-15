@@ -1,34 +1,50 @@
 [project]
 name = "slidgram"
+version = "0.0.0-dev0"
 description = "A Telegram/XMPP gateway"
-requires-python = ">= 3.11"
-dependencies = [
-    "pyrofork>=2.3.55,<2.4",
-    "slidge>=0.2.3",
-    "slidge-style-parser>=0.1.8",
-    "tgcrypto>=1.2.5",
-]
 authors = [
     {name = "Nicolas Cedilnik", email = "nicoco@nicoco.fr"},
 ]
+readme = "README.md"
 license = {file = "LICENSE"}
 classifiers = [
     "Topic :: Internet :: XMPP",
 ]
-keywords = ["xmpp", "gateway", "bridge", "instant messaging", "telegram"]
-version = "0.0.0-dev0"
-readme = "README.md"
+requires-python = ">= 3.11"
+keywords = ["xmpp", "gateway", "bridge", "instant messaging", "chat", "telegram"]
+dependencies = [
+    "pyrofork>=2.3.55,<2.4",
+    "slidge>=0.2.3, <0.3",
+    "slidge-style-parser>=0.1.8",
+    "tgcrypto>=1.2.5",
+]
 
 [project.urls]
 Homepage = "https://codeberg.org/slidge/slidgram"
 Issues = "https://codeberg.org/slidge/slidgram/issues"
 Repository = "https://codeberg.org/slidge/slidgram"
-"Chat room" = "https://conference.nicoco.fr:5281/muc_log/slidge/"
+"Chat room" = "https://slidge.im/xmpp-web/#/guest?join=slidge@conference.nicoco.fr"
 Documentation = "https://slidge.im/docs/slidgram/main"
 changelog = "https://codeberg.org/slidge/slidgram/releases"
 
 [project.scripts]
-slidgram = 'slidgram:main'
+slidgram = "slidgram:main"
+
+[dependency-groups]
+dev = [
+    "furo>=2024.8.6",
+    "mypy>=1.14.1",
+    "pytest>=8.3.4",
+    "pytest-asyncio>=0.25.3",
+    "ruff>=0.9.1",
+    "slidge-sphinx-extensions>=0.1.0",
+    "sphinx-autoapi>=3.4.0",
+    "sphinx-mdinclude>=0.6.2",
+]
+
+[tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "session"
+
 
 [build-system]
 requires = ["setuptools", "setuptools-scm"]
@@ -37,18 +53,15 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 include = ["slidgram*"]
 
-[tool.mypy]
-files = ["slidgram"]
-exclude = ["tests"]
-check_untyped_defs = true
-strict = false
+[tool.setuptools]
+# FIXME: remove this when the setuptools upstream bug is fixed
+# https://github.com/astral-sh/uv/issues/9513#issuecomment-2519527822
+license-files = []
 
-[tool.ruff]
-line-length = 88
-exclude = ["tests"]
-
-[tool.ruff.lint]
-select = ["I"]
+# this should not be any problem and fixes compatibility with pycharm
+# when installing anything (such as slidge core) in editable mode
+[tool.uv]
+config-settings = { editable_mode = "compat" }
 
 [tool.uv.sources]
 slidge-sphinx-extensions = { index = "codeberg" }
@@ -62,21 +75,28 @@ name = "codeberg"
 url = "https://codeberg.org/api/packages/slidge/pypi/simple"
 publish-url = "https://codeberg.org/api/packages/slidge/pypi"
 
-[dependency-groups]
-dev = [
-    "furo>=2024.8.6",
-    "mypy>=1.14.1",
-    "pytest>=8.3.4",
-    "ruff>=0.9.1",
-    "slidge-sphinx-extensions>=0.1.0",
-    "sphinx-autoapi>=3.4.0",
-    "sphinx-mdinclude>=0.6.2",
+[tool.mypy]
+files = ["slidgram"]
+exclude = [
+    "tests",
+]
+check_untyped_defs = true
+strict = false
+
+[[tool.mypy.overrides]]
+module = [
+    "slidge_style_parser.*",
+]
+ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 88
+exclude = [
+    "tests",
 ]
 
-[tool.setuptools]
-# FIXME: remove this when the setuptools upstream bug is fixed
-# https://github.com/astral-sh/uv/issues/9513#issuecomment-2519527822
-license-files = []
+[tool.ruff.lint]
+select = ["I"]
 
 [tool.git-cliff.remote.gitea]
 owner = "slidge"
@@ -89,14 +109,20 @@ header = """
 # Changes
 """
 body = """
-{% for group, commits in commits | group_by(attribute="group") %}
+{% for group, all_commits in commits | group_by(attribute="group") %}
+    {%- if group == "cfix" %}{% continue %}{%- endif %}
     ## {{ group | striptags | trim | upper_first }}
-    {% for commit in commits %}
+    {% for commit in all_commits %}
         - {% if commit.scope %}*({{ commit.scope }})* {% endif %}\
             {% if commit.breaking %}[**breaking**] {% endif %}\
-            {{ commit.message | split(pat="\n") | first | upper_first | trim }}\
-            {% if commit.remote.username %} by @{{ commit.remote.username }}{%- endif %} \
-            [`{{ commit.id | truncate(length=7, end="") }}`](./commit/{{ commit.id }})\
+            {{ commit.message | split(pat="\n") | first | upper_first | trim }} \
+            ([`{{ commit.id | truncate(length=7, end="") }}`](./commit/{{ commit.id -}})\
+            {% if commit.remote.username %} by @{{ commit.remote.username }}{%- endif -%}
+            {%- for cfix_commit in commits | filter(attribute="group", value="cfix") -%}
+                {%- if cfix_commit.scope and commit.id is starting_with(cfix_commit.scope) -%}
+                    , [`{{ cfix_commit.id | truncate(length=7, end="") }}`](./commit/{{ cfix_commit.id }}){% if cfix_commit.remote.username %} by @{{ cfix_commit.remote.username }}{%- endif -%}
+                {%- endif -%}
+            {%- endfor -%})\
     {% endfor %}
 {% endfor %}\n
 """
@@ -105,23 +131,27 @@ footer = """
 """
 
 [tool.git-cliff.git]
+conventional_commits = true
+filter_unconventional = false
 commit_parsers = [
   { message = "^feat", group = "<!-- 0 -->🚀 Features" },
-  { message = "^imprv", group = "<!-- 1 -->✨ Improvements" },
-  { message = "^fix", group = "<!-- 2 -->🐛 Bug Fixes" },
-  { message = "^compat", group = "<!-- 3 -->💑 Compatibility" },
-  { message = "^refactor", group = "<!-- 4 -->🚜 Refactor" },
-  { message = "^doc", group = "<!-- 5 -->📚 Documentation" },
-  { message = "^perf", group = "<!-- 6 -->⚡ Performance" },
-  { message = "^style", group = "<!-- 7 -->🎨 Styling" },
-  { message = "^test", group = "<!-- 8 -->🧪 Testing" },
+  { message = "^imprv", group = "<!-- 01 -->✨ Improvements" },
+  { message = "^fix", group = "<!-- 02 -->🐛 Bug Fixes" },
+  { message = "^compat", group = "<!-- 03 -->💑 Compatibility" },
+  { message = "^refactor", group = "<!-- 04 -->🚜 Refactor" },
+  { message = "^doc", group = "<!-- 05 -->📚 Documentation" },
+  { message = "^perf", group = "<!-- 06 -->⚡ Performance" },
+  { message = "^style", group = "<!-- 07 -->🎨 Styling" },
+  { message = "^test", group = "<!-- 08 -->🧪 Testing" },
   { message = "^chore\\(release\\): prepare for", skip = true },
   { message = "^chore\\(deps.*\\)", skip = true },
   { message = "^chore\\(pr\\)", skip = true },
   { message = "^chore\\(pull\\)", skip = true },
-  { message = "^cfix", skip = true },
-  { message = "^chore|^ci", group = "<!-- 9 -->⚙️ Miscellaneous Tasks" },
+  { message = "^build\\(lockfile\\)", skip = true },
+  { message = "^chore\\(lockfile\\)", skip = true },
+  { message = "^chore|^ci", group = "<!-- 09 -->⚙️ Miscellaneous Tasks" },
   { body = ".*security", group = "<!-- 10 -->🛡️ Security" },
   { message = "^revert", group = "<!-- 11 -->◀️ Revert" },
-  { message = ".*", group = "<!-- 12 -->💼 Other" },
+  { message = "^cfix", group = "cfix" },
+  { message = ".*", group = "<!-- 13 -->💼 Other" },
 ]

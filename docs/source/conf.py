@@ -1,9 +1,13 @@
+import os
 from datetime import datetime
 from pathlib import Path
 
+from slidge.__version__ import __version__ as slidge_version
+
 project = "slidgram"
 copyright = f"{datetime.today().year}, the {project} contributors"
-author = "the slidge contributors"
+author = f"the {project} contributors"
+branch = os.getenv("CI_COMMIT_BRANCH", "main")
 
 extensions = [
     "sphinx.ext.autodoc",
@@ -29,15 +33,15 @@ autoapi_dirs = ["../../slidgram"]
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "slixmpp": ("https://slixmpp.readthedocs.io/en/latest/", None),
-    "slidge": ("https://slidge.im/docs/slidge/main/", None),
+    "slidge": (f"https://slidge.im/docs/slidge/{slidge_version}/", None),
 }
 
 extlinks = {"xep": ("https://xmpp.org/extensions/xep-%s.html", "XEP-%s")}
 
 html_theme = "furo"
 html_theme_options = {
-    "source_edit_link": f"https://codeberg.org/slidge/{project}/_edit/main/docs/source/{{filename}}",
-    "source_view_link": f"https://codeberg.org/slidge/{project}/src/branch/main/docs/source/{{filename}}",
+    "source_edit_link": f"https://codeberg.org/slidge/{project}/_edit/{branch}/docs/source/{{filename}}",
+    "source_view_link": f"https://codeberg.org/slidge/{project}/src/branch/{branch}/docs/source/{{filename}}",
     "footer_icons": [
         {
             "name": "Codeberg",
