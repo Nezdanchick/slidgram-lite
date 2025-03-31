@@ -1,9 +1,7 @@
-# Build the production container
-
 when:
   event: [push, tag]
   path:
-    - "${CI_REPO_NAME}/**/*"
+    - "slidgram/**"
     - Dockerfile
     - pyproject.toml
     - uv.lock
@@ -11,26 +9,56 @@ when:
 labels:
   platform: linux/amd64
 
-steps:
-  version:
-    image: codeberg.org/slidge/woodpecker-version
-    pull: true
+clone:
+  - name: clone-deep
+    image: woodpeckerci/plugin-git
+    settings:
+      tags: true
+      partial: false
 
-  build-and-push:
+variables:
+  - &settings
+    repo: codeberg.org/${CI_REPO_OWNER}/slidgram
+    username: ${CI_REPO_OWNER}
+    password:
+      from_secret: CODEBERG_TOKEN
+    registry: codeberg.org
+    target: slidgram
+    platforms: linux/amd64,linux/arm64
+    # this only caches one of the two platforms unfortunately
+    # https://github.com/docker/buildx/discussions/1382
+    # https://github.com/docker/buildx/issues/1044
+    cache_images:
+      - codeberg.org/${CI_REPO_OWNER}/slidgram:buildcache
+
+steps:
+  build-tag:
+    image: woodpeckerci/plugin-docker-buildx
+    when:
+      event: [tag]
+    settings:
+      <<: *settings
+      tags:
+        - latest
+        - ${CI_COMMIT_TAG}
+
+  build-branch:
+    when:
+      event: [push]
     image: woodpeckerci/plugin-docker-buildx
     settings:
-      repo: codeberg.org/${CI_REPO_OWNER}/${CI_REPO_NAME}
-      username: ${CI_REPO_OWNER}
-      password:
-        from_secret: CODEBERG_TOKEN
-      registry: codeberg.org
-      tags_file: .tags
-      target: ${CI_REPO_NAME}
-      platforms: linux/amd64,linux/arm64
-      # this only caches one of the two platforms unfortunately
-      # https://github.com/docker/buildx/discussions/1382
-      # https://github.com/docker/buildx/issues/1044
-      cache_images:
-        - codeberg.org/${CI_REPO_OWNER}/${CI_REPO_NAME}:buildcache-arm64
+      <<: *settings
+      tags:
+        - ${CI_COMMIT_BRANCH}
+
+  build-ci:
     when:
-      event: [push, tag]
+      event: [push]
+      branch: ${CI_REPO_DEFAULT_BRANCH}
+    image: woodpeckerci/plugin-docker-buildx
+    settings:
+      <<: *settings
+      target: ci
+      tag: ci
+      cache_images:
+        - codeberg.org/${CI_REPO_OWNER}/slidgram:buildcache-ci

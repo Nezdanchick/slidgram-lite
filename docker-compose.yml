@@ -1,4 +1,3 @@
-version: "3.9"
 services:
   slidge:
     build:
@@ -6,8 +5,8 @@ services:
       target: dev
     network_mode: service:prosody
     volumes:
-      - ./slidgram:/venv/lib/python/site-packages/legacy_module
-      - ./persistent:/var/lib/slidge
+      - ./slidgram:/build/slidgram
+      - ./persistent:/var/lib/slidge/slidge.localhost
     depends_on:
       prosody:
         condition: service_started

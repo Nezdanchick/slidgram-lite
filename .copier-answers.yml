@@ -1,12 +1,20 @@
 # Do not edit manually!
 # Changes here will be overwritten by copier.
 # https://copier.readthedocs.io/
-_commit: 43cbb49
+_commit: 7d156b2
 _src_path: git+https://codeberg.org/slidge/legacy-module-template
 authors:
 -   email: nicoco@nicoco.fr
     name: Nicolas Cedilnik
 ci_id: 14064
+container_builder_deps:
+- git
+- make
+- libglib2.0-dev
+- gcc
+container_debian_version: bookworm
+container_python_version: '3.11'
+container_requires_rustup: false
 custom_build_system: ''
 custom_readme_head: ''
 custom_readme_tail: '

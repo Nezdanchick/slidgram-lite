@@ -1,17 +1,17 @@
 [project]
 name = "slidgram"
-version = "0.0.0-dev0"
 description = "A Telegram/XMPP gateway"
 authors = [
     {name = "Nicolas Cedilnik", email = "nicoco@nicoco.fr"},
 ]
 readme = "README.md"
-license = {file = "LICENSE"}
+license = "AGPL-3.0-or-later"
 classifiers = [
     "Topic :: Internet :: XMPP",
 ]
 requires-python = ">= 3.11"
 keywords = ["xmpp", "gateway", "bridge", "instant messaging", "chat", "telegram"]
+dynamic = ["version"]
 dependencies = [
     "pyrofork>=2.3.55,<2.4",
     "slidge>=0.2.3, <0.3",
@@ -51,12 +51,10 @@ requires = ["setuptools", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-include = ["slidgram*"]
+include = ["slidgram"]
 
-[tool.setuptools]
-# FIXME: remove this when the setuptools upstream bug is fixed
-# https://github.com/astral-sh/uv/issues/9513#issuecomment-2519527822
-license-files = []
+[tool.setuptools_scm]
+version_file = "slidgram/__version__.py"
 
 # this should not be any problem and fixes compatibility with pycharm
 # when installing anything (such as slidge core) in editable mode
@@ -93,6 +91,7 @@ ignore_missing_imports = true
 line-length = 88
 exclude = [
     "tests",
+    "slidgram/__version__.py",
 ]
 
 [tool.ruff.lint]

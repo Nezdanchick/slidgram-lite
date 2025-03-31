@@ -26,6 +26,9 @@ From [the codeberg package registry](https://codeberg.org/slidge/-/packages/cont
 docker run codeberg.org/slidge/slidgram  # works with podman too
 ```
 
+Use the `:latest` tag for the latest release, `:vX.X.X` for release X.X.X, and `:main`
+for the bleeding edge.
+
 ### Python package
 
 With [pipx](https://pypa.github.io/pipx/):
@@ -36,12 +39,8 @@ With [pipx](https://pypa.github.io/pipx/):
 pipx install slidgram
 
 # for the bleeding edge
-pipx install slidgram==0.0.0.dev0 \
+pipx install slidgram \
     --pip-args='--extra-index-url https://codeberg.org/api/packages/slidge/pypi/simple/'
-
-# to update bleeding edge installs
-pipx install slidgram==0.0.0.dev0 \
-    --pip-args='--extra-index-url https://codeberg.org/api/packages/slidge/pypi/simple/' --force
 
 slidgram --help
 ```

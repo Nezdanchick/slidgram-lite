@@ -1,34 +1,35 @@
 when:
-  event: [push, tag, pull_request]
-  path: ["${CI_REPO_NAME}/**/*", "pyproject.toml", "README.md"]
+  event: [push, tag]
+  path: ["slidgram/**/*", "pyproject.toml", "README.md"]
 
 variables:
-  - &image codeberg.org/slidge/woodpecker-${CI_REPO_NAME}
+  - &ci-image codeberg.org/${CI_REPO_OWNER}/slidgram:ci
   - &only-main-tag
     when:
       branch: main
       event: tag
 
-steps:
-  version:
-    image: codeberg.org/slidge/woodpecker-version
-    pull: true
+clone:
+  - name: clone-deep
+    image: woodpeckerci/plugin-git
+    settings:
+      tags: true
+      partial: false
 
+steps:
   changelog:
-    depends_on: version
     image: codeberg.org/slidge/woodpecker-generate-changelog
     pull: true
 
   build:
-    image: *image
-    depends_on: version
+    image: *ci-image
     commands:
       - uv build
 
   codeberg-pypi:
     when:
       event: [push, tag]
-    image: *image
+    image: *ci-image
     depends_on: build
     environment:
       CODEBERG_TOKEN:
@@ -37,7 +38,7 @@ steps:
       - uv publish --index codeberg --token $CODEBERG_TOKEN
 
   pypi:
-    image: *image
+    image: *ci-image
     depends_on: build
     <<: *only-main-tag
     environment:
@@ -52,7 +53,7 @@ steps:
     <<: *only-main-tag
     settings:
       files:
-        - dist/${CI_REPO_NAME}*
+        - dist/slidgram*
       api_key:
         from_secret: CODEBERG_TOKEN
       note: CHANGELOG
