@@ -37,7 +37,7 @@ FROM builder AS ci
 
 # In CI we copy /venv to .venv, then update it for the whole workflow.
 RUN --mount=source=.git,target=/build/.git,type=bind \
-    uv sync --all-groups
+    uv sync --all-groups --no-install-project
 ENV UV_PROJECT_ENVIRONMENT=.venv
 ENV PATH=".venv/bin:$PATH"
 
@@ -62,7 +62,7 @@ RUN apt update && \
     rm -rf /var/lib/apt/lists/*
 COPY --from=codeberg.org/slidge/lottie-converter /lottie-converter/* /usr/bin/
 RUN uv pip install watchdog[watchmedo]
-COPY --from=builder /venv /venv
+COPY --from=ci /venv /venv
 ENTRYPOINT ["watchmedo", "auto-restart", \
   "--pattern", "*.py", \
   "--directory", "/build/slidgram", \
@@ -95,7 +95,7 @@ RUN addgroup --system --gid 10000 slidge
 RUN adduser --system --uid 10000 --ingroup slidge --home /var/lib/slidge slidge
 # lottie-converter converts vector animated stickers to videos
 RUN apt update && \
-    apt install --assume-yes ffmpeg && \
+    apt install --assume-yes --no-install-recommends ffmpeg && \
     rm -rf /var/lib/apt/lists/*
 COPY --from=codeberg.org/slidge/lottie-converter /lottie-converter/* /usr/bin/
 USER slidge

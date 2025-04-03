@@ -1,3 +1,6 @@
+# DO NOT EDIT
+# Generated from .copier-answers.yml
+
 when:
   event: [push, tag]
   path:
@@ -24,12 +27,12 @@ variables:
       from_secret: CODEBERG_TOKEN
     registry: codeberg.org
     target: slidgram
-    platforms: linux/amd64,linux/arm64
     # this only caches one of the two platforms unfortunately
     # https://github.com/docker/buildx/discussions/1382
     # https://github.com/docker/buildx/issues/1044
     cache_images:
       - codeberg.org/${CI_REPO_OWNER}/slidgram:buildcache
+    platforms: linux/amd64,linux/arm64
 
 steps:
   build-tag:

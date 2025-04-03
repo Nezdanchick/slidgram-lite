@@ -1,13 +1,13 @@
+# DO NOT EDIT
+# Generated from .copier-answers.yml
+
 when:
   event: [push, tag]
   path: ["slidgram/**/*", "pyproject.toml", "README.md"]
+  branch: main
 
 variables:
   - &ci-image codeberg.org/${CI_REPO_OWNER}/slidgram:ci
-  - &only-main-tag
-    when:
-      branch: main
-      event: tag
 
 clone:
   - name: clone-deep
@@ -40,7 +40,8 @@ steps:
   pypi:
     image: *ci-image
     depends_on: build
-    <<: *only-main-tag
+    when:
+      event: tag
     environment:
       PYPI_TOKEN:
         from_secret: PYPI_TOKEN
@@ -50,7 +51,8 @@ steps:
   codeberg-release:
     image: woodpeckerci/plugin-release
     depends_on: [changelog, build]
-    <<: *only-main-tag
+    when:
+      event: tag
     settings:
       files:
         - dist/slidgram*
