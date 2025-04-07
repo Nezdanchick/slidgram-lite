@@ -23,6 +23,7 @@ steps:
 
   build:
     image: *ci-image
+    pull: true
     commands:
       - uv build
 

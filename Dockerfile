@@ -39,7 +39,8 @@ FROM builder AS ci
 RUN --mount=source=.git,target=/build/.git,type=bind \
     uv sync --all-groups --no-install-project
 ENV UV_PROJECT_ENVIRONMENT=.venv
-ENV PATH=".venv/bin:$PATH"
+ENV UV_LINK_MODE=copy
+ENV PATH="/woodpecker/src/codeberg.org/slidge/slidgram/.venv/bin:$PATH"
 
 # Dev container
 # *************
