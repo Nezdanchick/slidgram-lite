@@ -1,5 +1,5 @@
-User docs
-=========
+Usage
+=====
 
 .. note::
   Telegram is OK with alternative clients, so as long as you're not doing evil stuff, using slidge

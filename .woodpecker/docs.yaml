@@ -3,14 +3,13 @@
 
 when:
   event: [push, tag, pull_request]
-  path: ["slidgram/**/*.py", "docs/**/*", "README.md"]
+  path: ["slidgram/**/*.py", "docs/**/*", "uv.lock", ".woodpecker/docs.yaml"]
 
 steps:
   build:
     image: codeberg.org/${CI_REPO_OWNER}/slidgram:ci
     pull: true
     commands:
-      - cp -r /venv .venv
       - uv sync --all-groups --all-extras
       - cd docs && make html
 
