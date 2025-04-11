@@ -15,10 +15,9 @@ requires-python = ">= 3.11"
 keywords = ["xmpp", "gateway", "bridge", "instant messaging", "chat", "telegram"]
 dynamic = ["version"]
 dependencies = [
-    "pyrofork>=2.3.55,<2.4",
+    "pyrofork[speedup]>=2.3.55,<2.4",
     "slidge>=0.2.3, <0.3",
     "slidge-style-parser>=0.1.8",
-    "tgcrypto>=1.2.5",
 ]
 
 [project.urls]

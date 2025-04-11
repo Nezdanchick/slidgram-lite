@@ -35,10 +35,9 @@ custom_readme_tail: '
 
     '
 dependencies:
-- pyrofork>=2.3.55,<2.4
+- pyrofork[speedup]>=2.3.55,<2.4
 - slidge>=0.2.3, <0.3
 - slidge-style-parser>=0.1.8
-- tgcrypto>=1.2.5
 dev_dependencies: []
 intersphinx_mappings: []
 lint_excludes: []
