@@ -63,6 +63,11 @@ class Gateway(BaseGateway):
 
     LEGACY_MSG_ID_TYPE = LEGACY_CONTACT_ID_TYPE = LEGACY_ROOM_ID_TYPE = int
 
+    # telegram presences are handled server-side, remove useless option
+    PREFERENCES = [
+        field for field in BaseGateway.PREFERENCES if field.var != "sync_presence"
+    ]
+
     def __init__(self):
         super().__init__()
         if not config.API_ID:
