@@ -104,6 +104,9 @@ class Session(BaseSession[int, Recipient]):
     async def on_gone(self, *_args, **_kwargs):
         pass
 
+    async def on_presence(self, *_args, **_kwargs):
+        pass
+
     @tg_to_xmpp_errors
     async def on_text(
         self,
