@@ -187,7 +187,7 @@ class Client(TelegramClient):
         self.log.debug("user %s was not cached! damn!", user_id)
         try:
             user = await self.get_users(user_id)
-        except PeerIdInvalid:
+        except (PeerIdInvalid, ValueError):
             self._user_cache[user_id] = invalid_user
             self.log.debug("user %s could not be resolved", user_id)
             raise InvalidUserException(f"{user_id} raised PeerIdInvalid")
