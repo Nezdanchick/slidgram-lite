@@ -18,7 +18,7 @@ from pyrogram.types import (
     WebPageEmpty,
 )
 from slidge.core.mixins.message import ContentMessageMixin
-from slidge.util.types import LinkPreview, MessageReference
+from slidge.util.types import LegacyAttachment, LinkPreview, MessageReference
 from slixmpp.exceptions import XMPPError
 
 from . import config
@@ -152,25 +152,26 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
             self.log.warning("Could not download %s", media)
             return
         await self.send_file(
-            None,
+            LegacyAttachment(
+                aio_stream=downloader,
+                name=getattr(media, "file_name", None),
+                legacy_file_id=media.file_unique_id,
+                caption=caption,
+                content_type=(
+                    "image/jpeg"
+                    if isinstance(
+                        media, Photo
+                    )  # no mime_type attribute for Photos, but always JPEG
+                    else getattr(media, "mime_type", None)
+                ),
+            ),
             message.id,
-            async_data_stream=downloader,
-            file_name=getattr(media, "file_name", None),
-            legacy_file_id=media.file_unique_id,
-            caption=caption,
             reply_to=await self._get_reply_to(message.reply_to_message),
             carbon=carbon,
             correction=correction,
             when=message.date,
             archive_only=archive_only,
             link_previews=_get_link_previews(message),
-            content_type=(
-                "image/jpeg"
-                if isinstance(
-                    media, Photo
-                )  # no mime_type attribute for Photos, but always JPEG
-                else getattr(media, "mime_type", None)
-            ),
         )
 
     async def __send_sticker(
@@ -197,15 +198,17 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
             self.log.debug("Conversion finished with return code: %s", proc.returncode)
 
         await self.send_file(
+            LegacyAttachment(
+                path=webm_path,
+                legacy_file_id="sticker-" + sticker_id,
+                content_type="video/webm",
+            ),
             legacy_msg_id=message.id,
-            file_path=webm_path,
-            legacy_file_id="sticker-" + sticker_id,
             reply_to=await self._get_reply_to(message.reply_to_message),
             carbon=carbon,
             correction=correction,
             when=message.date,
             archive_only=archive_only,
-            content_type="video/webm",
         )
 
     async def _get_reply_to(self, message: Message | None) -> MessageReference | None:

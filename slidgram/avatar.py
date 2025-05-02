@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 
 from pyrogram.types import ChatPhoto, Photo
 from slidge.core.mixins import AvatarMixin
+from slidge.util.types import Avatar
 
 from . import config
 
@@ -30,11 +31,11 @@ class SetAvatarMixin(AvatarMixin):
             file_id = photo.file_id
             unique_id = photo.file_unique_id
 
-        if self.avatar_id == unique_id:
+        if self.avatar is not None and self.avatar.unique_id == unique_id:
             self.log.debug("Cached avatar is OK")
             return
 
-        self.log.debug("Cached avatar is not OK: %r vs %r", self.avatar_id, unique_id)
+        self.log.debug("Cached avatar is not OK: %r vs %r", self.avatar, unique_id)
         self.session.create_task(self.__download(file_id, unique_id))
 
     async def __download(self, file_id: str, unique_id: str) -> None:
@@ -48,4 +49,4 @@ class SetAvatarMixin(AvatarMixin):
             self.log.error("Empty avatar download path? %r", path)
             return
 
-        await self.set_avatar(path, unique_id, delete=True)
+        await self.set_avatar(Avatar(path=path, unique_id=unique_id), delete=True)

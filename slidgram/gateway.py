@@ -104,12 +104,13 @@ class Gateway(BaseGateway):
         assert isinstance(phone, str)
         if not is_valid_phone_number(phone):
             raise ValueError("Not a valid phone number")
-        for u in self.store.users.get_all():
-            if u.legacy_module_data.get("phone") == phone:
-                raise XMPPError(
-                    "not-allowed",
-                    text="Someone is already using this phone number on this server.",
-                )
+        with self.store.session() as orm:
+            for u in orm.query(GatewayUser).all():
+                if u.legacy_module_data.get("phone") == phone:
+                    raise XMPPError(
+                        "not-allowed",
+                        text="Someone is already using this phone number on this server.",
+                    )
         tg_client = Client(
             str(user_jid.bare),
             phone_number=phone,

@@ -304,7 +304,7 @@ class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int
                 self.name = name
             else:
                 raise XMPPError(
-                    "internal-server-error", "While trying to rename %s", self.name
+                    "internal-server-error", f"While trying to rename {self.name}"
                 )
         if description != self.description:
             if await self.tg.set_chat_description(self.legacy_id, description):
@@ -312,8 +312,7 @@ class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int
             else:
                 raise XMPPError(
                     "internal-server-error",
-                    "While trying to change the description of %s",
-                    self.name,
+                    f"While trying to change the description of {self.name}",
                 )
 
     @tg_to_xmpp_errors
@@ -412,7 +411,7 @@ class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int
         self.pinned_message_ids = data.get("pinned_messages", [])
 
 
-class Participant(TelegramMessageSenderMixin, LegacyParticipant):
+class Participant(TelegramMessageSenderMixin, LegacyParticipant):  # type:ignore[misc]
     muc: MUC
 
     async def send_tg_msg(
