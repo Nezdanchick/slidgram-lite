@@ -1163,7 +1163,7 @@ wheels = [
 
 [[package]]
 name = "slidge"
-version = "0.3.0a0"
+version = "0.3.0a1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp", extra = ["speedups"] },
@@ -1177,9 +1177,9 @@ dependencies = [
     { name = "sqlalchemy" },
     { name = "thumbhash" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/67/b3/2de567a88230c7c76a72861350c2a68f45658cca05842c364fc3ae1bb7c1/slidge-0.3.0a0.tar.gz", hash = "sha256:1e13e187056f67bb7e5ea8dbd35ad5821bed9c15fe9c963089c09bd8b47b0afc", size = 2448305 }
+sdist = { url = "https://files.pythonhosted.org/packages/e2/46/5fb10badf633cfcb15337a01c82190c47992886c6154afa9ad24fc41dedd/slidge-0.3.0a1.tar.gz", hash = "sha256:7a7850c50c20e0c80484bbc9eba55c55b7f2794e8dd4b0cf1ccb9ce4e6533291", size = 2448882 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/19/a5/d8728b1f05408d709a8228a2f5a762c592266db493e419a4fdb33c929c65/slidge-0.3.0a0-py3-none-any.whl", hash = "sha256:7ddd3b9ce197af2d191d3964e1c639bd6009995f1cb3c3a680a2639d2d5b9f02", size = 201425 },
+    { url = "https://files.pythonhosted.org/packages/cf/1b/8356d22d4bc895580a28878dd58f924fa67f63c7498fc538c4b559a66b8d/slidge-0.3.0a1-py3-none-any.whl", hash = "sha256:f60230d197071ee0c4b873e88e758a190c2498d90ee80274c3563cfaa25934c2", size = 202087 },
 ]
 
 [[package]]
@@ -1276,7 +1276,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "pyrofork", extras = ["speedup"], specifier = ">=2.3.55,<2.4" },
-    { name = "slidge", specifier = ">=0.3.0a0,<0.4" },
+    { name = "slidge", specifier = ">=0.3.0a1,<0.4" },
     { name = "slidge-style-parser", specifier = ">=0.1.8" },
 ]
 
