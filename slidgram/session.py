@@ -400,6 +400,8 @@ class Session(BaseSession[int, Recipient]):
 
     @log_error_on_peer_id_invalid
     async def _on_tg_msg(self, _tg: TelegramClient, message: Message) -> None:
+        if message.chat.type == ChatType.FORUM:
+            return
         if message.chat is not None and self.tg.is_me(message.chat.id):
             # slidge voluntarily does not support messages to self through the legacy network
             return
