@@ -165,8 +165,7 @@ class Gateway(BaseGateway):
                 ),
             )
 
-    async def unregister(self, user: GatewayUser):
-        session: "Session" = self.get_session_from_user(user)  # type: ignore
+    async def unregister(self, session: "Session"):  # type:ignore[override]
         try:
             await session.tg.log_out()
         except (AuthKeyUnregistered, ConnectionError):
