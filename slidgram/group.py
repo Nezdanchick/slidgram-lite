@@ -447,7 +447,9 @@ class Participant(TelegramMessageSenderMixin, LegacyParticipant):  # type:ignore
                 self.affiliation = "admin"
             self.role = "moderator"
         elif member.status == ChatMemberStatus.RESTRICTED:
-            self.set_hats([Hat("https://slidge.im/slidgram/hats", "restricted")])
+            self.set_hats(
+                [Hat("https://slidge.im/slidgram/hats/restricted", "restricted")]
+            )
             self.role = "visitor"
         elif member.status == ChatMemberStatus.LEFT:
             self.leave()
@@ -457,7 +459,14 @@ class Participant(TelegramMessageSenderMixin, LegacyParticipant):  # type:ignore
             self.leave()
 
         if member.custom_title is not None:
-            self.set_hats([Hat("https://slidge.im/slidgram/hats", member.custom_title)])
+            self.set_hats(
+                [
+                    Hat(
+                        f"https://slidge.im/slidgram/hats/{member.custom_title}",
+                        member.custom_title,
+                    )
+                ]
+            )
 
 
 def is_owner_privileges(privileges: ChatPrivileges | None) -> bool:
