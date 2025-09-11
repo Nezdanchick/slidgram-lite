@@ -17,13 +17,7 @@ RUN apt-get update -y && \
 WORKDIR /build
 ENV UV_PROJECT_ENVIRONMENT=/venv
 ENV PATH="/venv/bin:/root/.cargo/bin:$PATH"
-# By making the venv relocatable, we can copy it to /workspace/.venv in CI, and only update
-# dependencies that might be out-of-date. If uv.lock is not modified, then updating
-# the .venv is a no-op.
-# This allows us to not wait on the CI container build for the test workflows to run,
-# and also to run workflows for pull requests that modify the lockfile. In this,
-# situation, updating the CI container is not an option.
-RUN uv venv $UV_PROJECT_ENVIRONMENT --relocatable
+RUN uv venv $UV_PROJECT_ENVIRONMENT
 COPY uv.lock pyproject.toml README.md .
 COPY slidgram slidgram
 # install dependencies in /venv
@@ -35,12 +29,13 @@ RUN --mount=source=.git,target=/build/.git,type=bind \
 # ************
 FROM builder AS ci
 
-# In CI we copy /venv to .venv, then update it for the whole workflow.
+# We won't use this venv in CI, but this populates the uv cache in the container,
+# minimizing (or even nulling) downloads.
 RUN --mount=source=.git,target=/build/.git,type=bind \
     uv sync --all-groups --no-install-project
-ENV UV_PROJECT_ENVIRONMENT=.venv
+ENV UV_PROJECT_ENVIRONMENT="/woodpecker/src/codeberg.org/slidge/slidgram/.venv"
 ENV UV_LINK_MODE=copy
-ENV PATH="/woodpecker/src/codeberg.org/slidge/slidgram/.venv/bin:$PATH"
+ENV PATH="$UV_PROJECT_ENVIRONMENT/bin:$PATH"
 
 # Dev container
 # *************
