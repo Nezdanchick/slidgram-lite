@@ -8,6 +8,7 @@ from pyrogram.types import (
     Animation,
     Audio,
     Document,
+    ForumTopic,
     Message,
     Photo,
     Sticker,
@@ -61,6 +62,16 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
             str(config.CONVERT_STICKERS_FPS),
         ]
 
+    @staticmethod
+    def __get_thread(message: Message) -> int | None:
+        if message.chat.type == ChatType.SUPERGROUP:
+            return message.message_thread_id
+        if message.chat.type == ChatType.FORUM:
+            if (topic := getattr(message, "topic", None)) is not None:
+                assert isinstance(topic, ForumTopic)
+                return topic.id
+        return None
+
     @property
     def tg(self):
         return self.session.tg
@@ -100,6 +111,7 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
             when=message.date,
             archive_only=archive_only,
             link_previews=_get_link_previews(message),
+            thread=self.__get_thread(message),
         )
 
     async def _send_media(
@@ -172,6 +184,7 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
             when=message.date,
             archive_only=archive_only,
             link_previews=_get_link_previews(message),
+            thread=self.__get_thread(message),
         )
 
     async def __send_sticker(

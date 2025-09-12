@@ -400,8 +400,6 @@ class Session(BaseSession[int, Recipient]):
 
     @log_error_on_peer_id_invalid
     async def _on_tg_msg(self, _tg: TelegramClient, message: Message) -> None:
-        if message.chat.type == ChatType.FORUM:
-            return
         if message.chat is not None and self.tg.is_me(message.chat.id):
             # slidge voluntarily does not support messages to self through the legacy network
             return
@@ -427,9 +425,6 @@ class Session(BaseSession[int, Recipient]):
 
     @log_error_on_peer_id_invalid
     async def _on_tg_edit(self, _tg: TelegramClient, message: Message) -> None:
-        if message.chat.type == ChatType.FORUM:
-            return
-
         if message.edit_hide:
             return
 
@@ -456,9 +451,6 @@ class Session(BaseSession[int, Recipient]):
     async def _on_tg_reaction(
         self, message: Message, user_id: int, emoji: str | None
     ) -> None:
-        if message.chat.type == ChatType.FORUM:
-            return
-
         emojis = [] if emoji is None else [emoji]
 
         if message.chat.type in (ChatType.PRIVATE, ChatType.BOT):
@@ -477,9 +469,6 @@ class Session(BaseSession[int, Recipient]):
     @ignore_event_on_peer_id_invalid
     async def _on_tg_deleted_msg(self, _tg, messages: list[Message]) -> None:
         for message in messages:
-            if message.chat.type == ChatType.FORUM:
-                continue
-
             msg_id = message.id
             message = self.tg.message_cache.get_by_message_id(msg_id)
             if message is None:

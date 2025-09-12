@@ -56,6 +56,7 @@ class Bookmarks(LegacyBookmarks[int, "MUC"]):
                 ChatType.GROUP,
                 ChatType.SUPERGROUP,
                 ChatType.CHANNEL,
+                ChatType.FORUM,
             ):
                 if (
                     dialog.top_message is not None
@@ -105,6 +106,9 @@ class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int
 
         if chat.type == ChatType.SUPERGROUP:
             self.type = MucType.CHANNEL_NON_ANONYMOUS
+        elif chat.type == ChatType.FORUM:
+            self.type = MucType.CHANNEL_NON_ANONYMOUS
+            self.name += " (forum)"
         elif chat.type == ChatType.CHANNEL:
             self.type = MucType.CHANNEL
             self.name += " (channel)"
