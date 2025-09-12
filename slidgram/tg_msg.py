@@ -176,6 +176,11 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
                     )  # no mime_type attribute for Photos, but always JPEG
                     else getattr(media, "mime_type", None)
                 ),
+                disposition="inline"
+                if isinstance(
+                    media, (Sticker, Voice, VideoNote, Thumbnail, Animation, Photo)
+                )
+                else "attachment",
             ),
             message.id,
             reply_to=await self._get_reply_to(message.reply_to_message),
@@ -215,6 +220,7 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
                 path=webm_path,
                 legacy_file_id="sticker-" + sticker_id,
                 content_type="video/webm",
+                disposition="inline",
             ),
             legacy_msg_id=message.id,
             reply_to=await self._get_reply_to(message.reply_to_message),
