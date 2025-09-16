@@ -28,6 +28,7 @@ from .text_entities import entities_to_xep_0393
 
 if TYPE_CHECKING:
     from .gateway import Gateway
+    from .group import MUC
     from .session import Session
 
 TgMediaTypes = (
@@ -49,6 +50,7 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
     xmpp: "Gateway"
     session: "Session"
     log: logging.Logger
+    muc: "MUC"
 
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
@@ -62,14 +64,14 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
             str(config.CONVERT_STICKERS_FPS),
         ]
 
-    @staticmethod
-    def __get_thread(message: Message) -> int | None:
+    async def __get_thread(self, message: Message) -> int | None:
         if message.chat.type == ChatType.SUPERGROUP:
             return message.message_thread_id
         if message.chat.type == ChatType.FORUM:
-            if (topic := getattr(message, "topic", None)) is not None:
-                assert isinstance(topic, ForumTopic)
-                return topic.id
+            if (topic := getattr(message, "topic", None)) is None:
+                return None
+            assert isinstance(topic, ForumTopic)
+            await self.muc.send_thread_subject(topic)
         return None
 
     @property
@@ -111,7 +113,7 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
             when=message.date,
             archive_only=archive_only,
             link_previews=_get_link_previews(message),
-            thread=self.__get_thread(message),
+            thread=await self.__get_thread(message),
         )
 
     async def _send_media(
@@ -185,7 +187,7 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
             when=message.date,
             archive_only=archive_only,
             link_previews=_get_link_previews(message),
-            thread=self.__get_thread(message),
+            thread=await self.__get_thread(message),
         )
 
     async def __send_sticker(

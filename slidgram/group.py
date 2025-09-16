@@ -1,10 +1,19 @@
+import time
 from datetime import datetime, timedelta, timezone
 from io import BytesIO
 from typing import TYPE_CHECKING
 
 from pyrogram.enums import ChatMemberStatus, ChatType
 from pyrogram.errors import UserNotParticipant
-from pyrogram.types import ChatMember, ChatPermissions, ChatPrivileges, Message
+from pyrogram.types import (
+    ChatMember,
+    ChatPermissions,
+    ChatPrivileges,
+    ForumTopic,
+    Message,
+    PeerChannel,
+    PeerUser,
+)
 from pyrogram.utils import zero_datetime
 from slidge import global_config
 from slidge.group import LegacyBookmarks, LegacyMUC, LegacyParticipant, MucType
@@ -81,6 +90,8 @@ class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
         self.pinned_message_ids = list[int]()
+        # key = topic.id; value = last broadcast UNIX timestamp
+        self.threads_title_broadcasted = dict[int, float]()
 
     @property
     def tg(self) -> Client:
@@ -409,10 +420,42 @@ class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int
         self.set_tg_pinned_message(message)
 
     def serialize_extra_attributes(self) -> dict:
-        return {"pinned_messages": self.pinned_message_ids}
+        return {
+            "pinned_messages": self.pinned_message_ids,
+            "threads_title_broadcasted": self.threads_title_broadcasted,
+        }
 
     def deserialize_extra_attributes(self, data: dict) -> None:
         self.pinned_message_ids = data.get("pinned_messages", [])
+        self.threads_title_broadcasted = {
+            int(k): v for k, v in data.get("threads_title_broadcasted", {}).items()
+        }
+
+    async def send_thread_subject(self, topic: ForumTopic) -> None:
+        async with self.session.lock(("thread_subject", self.legacy_id, topic.id)):
+            self.refresh()
+            last_broadcast = self.threads_title_broadcasted.get(topic.id)
+            if (
+                last_broadcast is not None
+                and time.time() - last_broadcast
+                < (global_config.MAM_MAX_DAYS * 3600 * 24) / 2
+            ):
+                self.log.debug("Title %s already sent", topic.title)
+                return
+            if isinstance(topic.from_id, PeerUser):
+                participant = await self.get_participant_by_legacy_id(
+                    topic.from_id.user_id
+                )
+                self.refresh()
+            elif isinstance(topic.from_id, PeerChannel):
+                participant = self.get_system_participant()
+            else:
+                self.log.debug("Cannot tell who set that title: %s", topic.from_id)
+                participant = self.get_system_participant()
+            self.log.warning("Sending thread title %s", topic.title)
+            participant.set_thread_subject(topic.id, topic.title)
+            self.threads_title_broadcasted[topic.id] = time.time()
+            self.commit()
 
 
 class Participant(TelegramMessageSenderMixin, LegacyParticipant):  # type:ignore[misc]
