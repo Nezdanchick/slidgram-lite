@@ -18,7 +18,7 @@ WORKDIR /build
 ENV UV_PROJECT_ENVIRONMENT=/venv
 ENV PATH="/venv/bin:/root/.cargo/bin:$PATH"
 RUN uv venv $UV_PROJECT_ENVIRONMENT
-COPY uv.lock pyproject.toml README.md .
+COPY pyproject.toml README.md .
 COPY slidgram slidgram
 # install dependencies in /venv
 # .git/ needs to be mounted for setuptools-scm to set the version

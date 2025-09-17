@@ -8,7 +8,6 @@ authors:
     name: Nicolas Cedilnik
 ci_id: 14064
 container_build_files:
-- uv.lock
 - pyproject.toml
 container_build_native: false
 container_builder_deps:
