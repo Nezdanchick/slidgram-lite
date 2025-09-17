@@ -1,14 +1,6 @@
 # DO NOT EDIT
 # Generated from .copier-answers.yml
 
-when:
-  event: [push, tag]
-  path:
-    - "slidgram/**"
-    - Dockerfile
-    - pyproject.toml
-    - uv.lock
-    - .woodpecker/container.yaml
 
 labels:
   platform: linux/amd64
@@ -48,7 +40,14 @@ steps:
 
   build-branch:
     when:
-      event: [push]
+      - event: push
+        path:
+          - "slidgram/**"
+          - Dockerfile
+          - pyproject.toml
+          - .woodpecker/container.yaml
+      - event: cron
+        cron: container-main
     image: woodpeckerci/plugin-docker-buildx:6.0.2
     settings:
       <<: *settings
@@ -57,8 +56,13 @@ steps:
 
   build-ci:
     when:
-      event: [push]
-      branch: ${CI_REPO_DEFAULT_BRANCH}
+      - event: push
+        path:
+          - "slidgram/**"
+          - Dockerfile
+          - pyproject.toml
+          - .woodpecker/container.yaml
+        branch: ${CI_REPO_DEFAULT_BRANCH}
     image: woodpeckerci/plugin-docker-buildx:6.0.2
     settings:
       <<: *settings
