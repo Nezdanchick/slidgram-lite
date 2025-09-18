@@ -72,6 +72,7 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
                 return None
             assert isinstance(topic, ForumTopic)
             await self.muc.send_thread_subject(topic)
+            return topic.id
         return None
 
     @property
