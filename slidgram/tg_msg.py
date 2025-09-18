@@ -179,7 +179,9 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
                     )  # no mime_type attribute for Photos, but always JPEG
                     else getattr(media, "mime_type", None)
                 ),
-                disposition="inline" if isinstance(media, Sticker) else "attachment",
+                disposition="inline"
+                if isinstance(media, (Sticker, Animation, Thumbnail))
+                else None,
             ),
             message.id,
             reply_to=await self._get_reply_to(message.reply_to_message),
