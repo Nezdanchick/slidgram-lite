@@ -452,7 +452,7 @@ class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int
             else:
                 self.log.debug("Cannot tell who set that title: %s", topic.from_id)
                 participant = self.get_system_participant()
-            self.log.warning("Sending thread title %s", topic.title)
+            self.log.debug("Sending thread title %s", topic.title)
             participant.set_thread_subject(topic.id, topic.title)
             self.threads_title_broadcasted[topic.id] = time.time()
             self.commit()
