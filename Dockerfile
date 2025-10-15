@@ -24,6 +24,8 @@ COPY slidgram slidgram
 # .git/ needs to be mounted for setuptools-scm to set the version
 RUN --mount=source=.git,target=/build/.git,type=bind \
     uv sync --no-dev
+ARG SLIDGE_PRERELEASE
+RUN [ ! -z "$SLIDGE_PRERELEASE" ] && uv pip install slidge --upgrade --prerelease allow || true
 
 # CI container
 # ************
