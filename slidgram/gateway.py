@@ -95,10 +95,6 @@ class Gateway(BaseGateway):
         if not reactions_db_path.exists():
             reactions.Base.metadata.create_all(reactions.engine)
 
-        if config.CONVERT_STICKERS:
-            self.stickers_dir = global_config.HOME_DIR / "stickers"
-            self.stickers_dir.mkdir(exist_ok=True)
-
     async def validate(self, user_jid: JID, registration_form: dict[str, str | None]):
         phone = registration_form["phone"]
         assert isinstance(phone, str)

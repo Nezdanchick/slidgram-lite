@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import os
 from typing import TYPE_CHECKING
 
 from pyrogram.enums import ChatType
@@ -19,6 +18,7 @@ from pyrogram.types import (
     WebPageEmpty,
 )
 from slidge.core.mixins.message import ContentMessageMixin
+from slidge.util import lottie
 from slidge.util.types import LegacyAttachment, LinkPreview, MessageReference
 from slixmpp.exceptions import XMPPError
 
@@ -55,14 +55,6 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
         self.send_file = handle_flood(self.send_file)  # type:ignore
-        self._convert_args = [
-            "--height",
-            str(config.CONVERT_STICKERS_SIZE),
-            "--width",
-            str(config.CONVERT_STICKERS_SIZE),
-            "--fps",
-            str(config.CONVERT_STICKERS_FPS),
-        ]
 
     async def __get_thread(self, message: Message) -> int | None:
         if message.chat.type == ChatType.SUPERGROUP:
@@ -120,17 +112,8 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
     async def _send_media(
         self, message: Message, carbon: bool, correction=False, archive_only=False
     ) -> None:
-        if (
-            message.sticker is not None
-            and message.sticker.is_animated
-            and config.CONVERT_STICKERS
-        ):
-            try:
-                await self.__send_sticker(message, carbon, correction, archive_only)
-            except Exception as e:
-                self.log.error("Could not convert stickers.", exc_info=e)
-            else:
-                return
+        if message.sticker is not None and message.sticker.is_animated:
+            await self.__send_sticker(message, carbon, correction, archive_only)
 
         media = _get_media(message)
         if media is None:
@@ -198,31 +181,19 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
     ):
         sticker = message.sticker
         sticker_id = sticker.file_unique_id
-        webm_path = (self.xmpp.stickers_dir / sticker_id).with_suffix(".tgs.webm")
+        tgs_path = lottie.sticker_path(sticker_id).with_suffix(".tgs")
 
-        if not webm_path.exists():
-            tgs_filename = (self.xmpp.stickers_dir / sticker_id).with_suffix(".tgs")
-            downloader = self.tg.get_downloader(sticker.file_id)
-            with tgs_filename.open("wb") as fp:
-                async for chunk in downloader:
-                    fp.write(chunk)
+        async with _sticker_download_lock:
+            if not tgs_path.exists():
+                downloader = self.tg.get_downloader(sticker.file_id)
+                with tgs_path.open("wb") as fp:
+                    async for chunk in downloader:
+                        fp.write(chunk)
             self.log.debug("Converting sticker %s to video", sticker.file_id)
-            async with _conversion_lock:
-                proc = await asyncio.create_subprocess_exec(
-                    config.CONVERT_STICKERS_EXECUTABLE,
-                    str(tgs_filename),
-                    *self._convert_args,
-                )
-                await proc.communicate()
-            self.log.debug("Conversion finished with return code: %s", proc.returncode)
+            attachment = await lottie.from_path(tgs_path, sticker_id)
 
         await self.send_file(
-            LegacyAttachment(
-                path=webm_path,
-                legacy_file_id="sticker-" + sticker_id,
-                content_type="video/webm",
-                disposition="inline",
-            ),
+            attachment,
             legacy_msg_id=message.id,
             reply_to=await self._get_reply_to(message.reply_to_message),
             carbon=carbon,
@@ -336,8 +307,5 @@ _MEDIAS = (
     "new_chat_photo",
 )
 
-cpu_count = os.cpu_count()
-if cpu_count is None or cpu_count <= 2:
-    _conversion_lock: asyncio.Lock | asyncio.Semaphore = asyncio.Lock()
-else:
-    _conversion_lock = asyncio.Semaphore(cpu_count - 1)
+
+_sticker_download_lock = asyncio.Lock()
