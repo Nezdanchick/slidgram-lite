@@ -18,8 +18,10 @@ WORKDIR /build
 ENV UV_PROJECT_ENVIRONMENT=/venv
 ENV PATH="/venv/bin:/root/.cargo/bin:$PATH"
 RUN uv venv $UV_PROJECT_ENVIRONMENT
-COPY pyproject.toml README.md .
+COPY pyproject.toml uv.lock  README.md .
 COPY slidgram slidgram
+ARG SLIDGE_USE_LOCKFILE=
+RUN [ -z "$SLIDGE_USE_LOCKFILE" ] && rm uv.lock
 # install dependencies in /venv
 # .git/ needs to be mounted for setuptools-scm to set the version
 RUN --mount=source=.git,target=/build/.git,type=bind \
@@ -54,11 +56,6 @@ RUN apt-get update -y \
         media-types \
         shared-mime-info \
     && rm -rf /var/lib/apt/lists/*
-# lottie-converter converts vector animated stickers to videos
-RUN apt update && \
-    apt install --assume-yes ffmpeg && \
-    rm -rf /var/lib/apt/lists/*
-COPY --from=codeberg.org/slidge/lottie-converter /lottie-converter/* /usr/bin/
 RUN uv pip install watchdog[watchmedo]
 COPY --from=ci /venv /venv
 ENTRYPOINT ["watchmedo", "auto-restart", \
@@ -91,11 +88,6 @@ RUN apt-get update -y \
     && rm -rf /var/lib/apt/lists/*
 RUN addgroup --system --gid 10000 slidge
 RUN adduser --system --uid 10000 --ingroup slidge --home /var/lib/slidge slidge
-# lottie-converter converts vector animated stickers to videos
-RUN apt update && \
-    apt install --assume-yes --no-install-recommends ffmpeg && \
-    rm -rf /var/lib/apt/lists/*
-COPY --from=codeberg.org/slidge/lottie-converter /lottie-converter/* /usr/bin/
 USER slidge
 COPY --from=builder /venv /venv
 COPY --from=builder /build/slidgram /venv/lib/python3.11/site-packages/slidgram

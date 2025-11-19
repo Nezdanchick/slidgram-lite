@@ -16,7 +16,7 @@ keywords = ["xmpp", "gateway", "bridge", "instant messaging", "chat", "telegram"
 dynamic = ["version"]
 dependencies = [
     "pyrofork[speedup]>=2.3.55,<2.4",
-    "slidge>=0.3.1,<0.4",
+    "slidge[lottie]>=0.3.4.dev,<0.4",
     "slidge-style-parser>=0.1.8",
 ]
 
@@ -24,7 +24,7 @@ dependencies = [
 Homepage = "https://codeberg.org/slidge/slidgram"
 Issues = "https://codeberg.org/slidge/slidgram/issues"
 Repository = "https://codeberg.org/slidge/slidgram"
-"Chat room" = "https://slidge.im/xmpp-web/#/guest?join=slidge@conference.nicoco.fr"
+"Chat room" = "https://slidge.im/xmpp-web/#/guest?join=support@rooms.slidge.im"
 Documentation = "https://slidge.im/docs/slidgram/main"
 changelog = "https://codeberg.org/slidge/slidgram/releases"
 

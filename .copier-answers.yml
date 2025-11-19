@@ -1,14 +1,12 @@
 # Do not edit manually!
 # Changes here will be overwritten by copier.
 # https://copier.readthedocs.io/
-_commit: 3539be6
+_commit: 6cf8a9f
 _src_path: git+https://codeberg.org/slidge/legacy-module-template
 authors:
 -   email: nicoco@nicoco.fr
     name: Nicolas Cedilnik
 ci_id: 14064
-container_build_files:
-- pyproject.toml
 container_build_native: false
 container_builder_deps:
 - git
@@ -36,7 +34,7 @@ custom_readme_tail: '
 debian_bundle: true
 dependencies:
 - pyrofork[speedup]>=2.3.55,<2.4
-- slidge>=0.3.1,<0.4
+- slidge[lottie]>=0.3.4.dev,<0.4
 - slidge-style-parser>=0.1.8
 dev_dependencies: []
 intersphinx_mappings: []
@@ -71,7 +69,7 @@ netbsd:
 pre_commit_custom_hooks: ''
 project_name: slidgram
 repology: ''
-requires_lottie: true
+requires_lottie: false
 silo:
     lib:
         name: Pyrofork
