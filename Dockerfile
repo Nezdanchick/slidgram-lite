@@ -21,7 +21,7 @@ RUN uv venv $UV_PROJECT_ENVIRONMENT
 COPY pyproject.toml uv.lock  README.md .
 COPY slidgram slidgram
 ARG SLIDGE_USE_LOCKFILE=
-RUN [ -z "$SLIDGE_USE_LOCKFILE" ] && rm uv.lock
+RUN [ -z "$SLIDGE_USE_LOCKFILE" ] && rm uv.lock || true
 # install dependencies in /venv
 # .git/ needs to be mounted for setuptools-scm to set the version
 RUN --mount=source=.git,target=/build/.git,type=bind \

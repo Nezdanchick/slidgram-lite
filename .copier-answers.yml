@@ -1,7 +1,7 @@
 # Do not edit manually!
 # Changes here will be overwritten by copier.
 # https://copier.readthedocs.io/
-_commit: 6cf8a9f
+_commit: d976f6b
 _src_path: git+https://codeberg.org/slidge/legacy-module-template
 authors:
 -   email: nicoco@nicoco.fr
@@ -69,7 +69,6 @@ netbsd:
 pre_commit_custom_hooks: ''
 project_name: slidgram
 repology: ''
-requires_lottie: false
 silo:
     lib:
         name: Pyrofork
