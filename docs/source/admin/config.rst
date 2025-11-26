@@ -26,8 +26,6 @@ etc.), and to specify a plugin-specific file on startup, eg:
 
     slidge -c /etc/slidge/superduper.conf
 
-.. config:
-
 slidgram-specific config
 ************************
 
@@ -57,6 +55,14 @@ The following options can be used:
 * as command line arguments, prepended with ``--``, e.g., ``--some-option=value``;
 * as environment variables, upper case, prepended with ``SLIDGE_``,
   and with dashes substituted with underscores, e.g., ``SLIDGE_SOME_OPTION=value``.
+
+
+.. note::
+
+    The following options are for slidge version |slidge_version|.
+    Depending on how you installed slidgram, you might have a different version of slidge.
+    Use ``slidgram --help`` for the exact list of options you can use.
+
 
 .. config-obj:: slidge.core.config
 

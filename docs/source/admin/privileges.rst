@@ -22,6 +22,8 @@ By configuring your XMPP server such that slidgram is a privileged entity, slidg
 
 - automatically add/remove "puppet contacts" from the XMPP roster of slidgram users,
 - reflect on the XMPP side messages sent by users via official Telegram apps,
+- (if using :ref:`upload` for attachments from Telegram to XMPP) request upload slots on behalf of slidgram users,
+  respecting any quota, retention, permission, or other policy set at the upload component level,
 - synchronize other actions done via official Telegram apps, such as marking messages as read, using emoji reactions,
   retracting messages, sending files…
 - automatically add XMPP bookmarks (:xep:`0402`) for MUCs (:xep:`0045`).
@@ -45,11 +47,12 @@ declare slidgram privileges in the appropriate virtualhost block:
 .. code-block:: lua
 
     local _privileges = {
-      roster = "both";
-      message = "outgoing";
+      roster = "both";       -- for adding/removing contacts from the users' rosters
+      message = "outgoing";  -- for reflecting messages sent by the user themselve from official Telegram apps
       iq = {
-        ["http://jabber.org/protocol/pubsub"] = "both";
-        ["http://jabber.org/protocol/pubsub#owner"] = "set";
+        ["http://jabber.org/protocol/pubsub"] = "both";      -- for PEP Bookmarks
+        ["http://jabber.org/protocol/pubsub#owner"] = "set"; -- for Message Display Synchronization
+        ["urn:xmpp:http:upload:0"] = "get";                  -- for HTTP Upload on behalf of users
       }
     };
 
@@ -90,6 +93,8 @@ ejabberd
             both: slidge_rule
           "http://jabber.org/protocol/pubsub#owner":
             set: slidge_rule
+          "urn:xmpp:http:upload:0":
+            get: slidge_rule
       mod_roster:
         versioning: true
 

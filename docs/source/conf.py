@@ -18,7 +18,6 @@ branch = os.getenv("CI_COMMIT_BRANCH", "main")
 
 extensions = [
     "sphinx.ext.autodoc",
-    "sphinx.ext.intersphinx",
     "sphinx.ext.extlinks",
     "sphinx.ext.viewcode",
     "sphinx.ext.autodoc.typehints",
@@ -31,13 +30,6 @@ autodoc_typehints = "description"
 
 # Include __init__ docstrings
 autoclass_content = "both"
-
-
-intersphinx_mapping = {
-    "python": ("https://docs.python.org/3", None),
-    "slixmpp": ("https://slixmpp.readthedocs.io/en/latest/", None),
-    "slidge": (f"https://slidge.im/docs/slidge/{slidge_version}/", None),
-}
 
 extlinks = {"xep": ("https://xmpp.org/extensions/xep-%s.html", "XEP-%s")}
 
@@ -53,3 +45,8 @@ html_theme_options = {
         },
     ],
 }
+
+
+rst_epilog = f"""
+.. |slidge_version| replace:: {slidge_version}
+"""

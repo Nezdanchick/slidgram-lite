@@ -21,6 +21,8 @@ For slidgram to bridge attachments from Telegram to XMPP, you have two options:
 - **No upload**: slidgram will copy attachments to a path it can write to. You then need to serve these files from via an HTTP server (eg nginx,
   prosody's `http_files <https://prosody.im/doc/modules/mod_http_files>`_, etc.).
 
+.. _upload:
+
 HTTP Upload
 ===========
 
@@ -84,11 +86,12 @@ The subdomain's FQDN (example.org) should be listed under the top level 'hosts'.
 To get more information about component configuration, see `ejabberd's docs
 <https://docs.ejabberd.im/admin/configuration/modules/#mod-http-upload>`_.
 
+.. _no-upload:
 
 No upload
 =========
 
-You need to set up ``no-upload-path`` to point to a directory, and ``no-upload-url-prefix`` to an URL prefix pointing to files in that directory (see :ref:`options` for more detail).
+You need to set up ``no-upload-path`` to point to a directory, and ``no-upload-url-prefix`` to an URL prefix pointing to files in that directory (see :ref:`generic-config` for more detail).
 Example: ``no-upload-path=/var/www/slidgram-attachments/`` and ``no-upload-url-prefix=https://example.org/slidgram/`` means that ``/var/www/slidgram-attachments/some-image.jpg`` is accessible at ``https://example.org/slidgram/some-image.jpg``
 
 Make sure that ``no-upload-path`` is writeable by slidgram and readable by
@@ -121,6 +124,7 @@ as per the `mod_http_files documentation <https://prosody.im/doc/modules/mod_htt
     -- Must be the same value as slidgram's no-upload-path
     http_files_dir = "/var/lib/slidgram/attachments"
 
+.. _nginx-no-upload:
 
 Example 2: nginx
 ----------------

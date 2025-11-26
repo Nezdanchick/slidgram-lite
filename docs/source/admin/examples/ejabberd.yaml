@@ -52,5 +52,7 @@ modules:
         both: slidge_rule
       "http://jabber.org/protocol/pubsub#owner":
         set: slidge_rule
+      "urn:xmpp:http:upload:0":
+        get: slidge_rule
   mod_roster:
     versioning: true
