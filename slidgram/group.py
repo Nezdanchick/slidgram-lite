@@ -183,7 +183,12 @@ class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int
             if (now - msg.date).days > global_config.MAM_MAX_DAYS:
                 break
             sender, _ = await self.session.get_sender(msg)
-            await sender.send_tg_msg(msg, archive_only=True)
+            try:
+                await sender.send_tg_msg(msg, archive_only=True)
+            except Exception as e:
+                self.log.warning("Could not backfill message: %s", e)
+                if msg.text:
+                    sender.send_text(msg.text, legacy_msg_id=msg.id, archive_only=True)
 
     @tg_to_xmpp_errors
     async def on_set_affiliation(
