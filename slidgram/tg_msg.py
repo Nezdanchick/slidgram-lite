@@ -231,7 +231,9 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
                             author = None
                         else:
                             raise
-        elif message.sender_chat is not None or message.chat.type == ChatType.CHANNEL:
+        elif message.sender_chat is not None or (
+            message.chat is not None and message.chat.type == ChatType.CHANNEL
+        ):
             muc = await self.bookmarks.by_legacy_id(message.chat.id)
             author = muc.get_system_participant()
         else:
