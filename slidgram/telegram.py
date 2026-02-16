@@ -1,9 +1,11 @@
 import asyncio
 import functools
 import logging
+from collections import OrderedDict
+from collections.abc import AsyncIterator, Awaitable, Callable
 from datetime import datetime
 from pathlib import Path
-from typing import AsyncIterator, Awaitable, Callable, OrderedDict, ParamSpec, TypeVar
+from typing import ParamSpec, TypeVar
 
 from pyrogram import Client as TelegramClient
 from pyrogram.client import Cache

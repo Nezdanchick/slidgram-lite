@@ -1,5 +1,6 @@
 import functools
-from typing import TYPE_CHECKING, Any, Callable, ParamSpec, TypeVar
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar
 
 from pyrogram.errors import (
     AuthKeyUnregistered,
@@ -37,7 +38,7 @@ def tg_to_xmpp_errors(func: WrappedMethod) -> WrappedMethod:
         try:
             return await func(*a, **ka)
         except AuthKeyUnregistered:
-            self: "Session" = a[0]
+            self: Session = a[0]
             await self.on_invalid_key()
         except (RPCError, InvalidUserException) as e:
             _raise(e, func)
@@ -52,7 +53,7 @@ def tg_to_xmpp_errors_it(func: WrappedMethod) -> WrappedMethod:
             async for x in func(*a, **ka):
                 yield x
         except AuthKeyUnregistered:
-            self: "Session" = a[0]
+            self: Session = a[0]
             await self.on_invalid_key()
         except (RPCError, InvalidUserException) as e:
             _raise(e, func)

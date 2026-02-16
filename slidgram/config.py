@@ -1,11 +1,9 @@
-from typing import Optional
-
 _api_txt = "\nIf you dont set it, users will have to enter their own on registration."
 
-API_ID: Optional[int] = None
+API_ID: int | None = None
 API_ID__DOC = "Telegram app api_id, obtained at https://my.telegram.org/apps" + _api_txt
 
-API_HASH: Optional[str] = None
+API_HASH: str | None = None
 API_HASH__DOC = (
     "Telegram app api_hash, obtained at https://my.telegram.org/apps" + _api_txt
 )

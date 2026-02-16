@@ -1,5 +1,5 @@
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from io import BytesIO
 from typing import TYPE_CHECKING
 
@@ -217,9 +217,7 @@ class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int
         nickname: str | None,
     ):
         member = await self.tg.get_chat_member(self.legacy_id, contact.legacy_id)
-        await self._on_ban(
-            member, contact, datetime.now(tz=timezone.utc) + timedelta(minutes=5)
-        )
+        await self._on_ban(member, contact, datetime.now(tz=UTC) + timedelta(minutes=5))
 
     async def _on_ban(
         self, member: ChatMember, contact: Contact, until: datetime = zero_datetime()
@@ -375,9 +373,9 @@ class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int
             self.subject_date = None
         else:
             if message.edit_date is None:
-                self.subject_date = message.date.replace(tzinfo=timezone.utc)
+                self.subject_date = message.date.replace(tzinfo=UTC)
             else:
-                self.subject_date = message.edit_date.replace(tzinfo=timezone.utc)
+                self.subject_date = message.edit_date.replace(tzinfo=UTC)
         if message.from_user is None:
             self.subject_setter = None
         else:
