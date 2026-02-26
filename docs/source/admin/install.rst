@@ -16,11 +16,16 @@ registry <https://codeberg.org/slidge/-/packages/container/slidgram/latest>`__.
 
 .. code:: sh
 
-   docker run codeberg.org/slidge/slidgram  # works with podman too
+   docker run codeberg.org/slidge/slidgram:latest  # works with podman too
 
 Use the ``:latest`` tag for the latest release, ``:vX.X.X`` for release
 X.X.X, and ``:main`` for the bleeding edge.
 
+
+For data persistence, mount a writeable directory into ``/var/lib/slidge``. Inside the container,
+slidgram runs as the ``slidge`` user with UID/GID 10000/10000.
+
+slidgram must be able to :ref:`reach your XMPP server <setup-component>`, so set up networking accordingly.
 
 Python packages
 ~~~~~~~~~~~~~~~

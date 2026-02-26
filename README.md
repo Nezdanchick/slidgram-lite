@@ -20,10 +20,11 @@ slidgram lets you chat with users of Telegram without leaving your favorite XMPP
 ## Quickstart
 
 ```sh
-docker run codeberg.org/slidge/slidgram \  # works with podman too
+docker run -v /somewhere/writeable:/var/lib/slidge \  # for data persistence
+    --network=host \  # easiest setup to reach your XMPP server
+    codeberg.org/slidge/slidgram:latest \
     --jid telegram.example.org \  # can be whatever you want it to be
-    --secret some-secret \  # must match your XMPP server config
-    --home-dir /somewhere/writeable  # for data persistence
+    --secret some-secret  # must match your XMPP server config
 ```
 
 Use the `:latest` tag for the latest release, `:vX.X.X` for release X.X.X, and `:main`

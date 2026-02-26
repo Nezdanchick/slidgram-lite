@@ -12,7 +12,7 @@ slidgram
 
    `Source <https://codeberg.org/slidge/slidgram>`_
 
-   `Chat room <xmpp:slidge@conference.nicoco.fr?join>`_
+   `Chat room <xmpp:support@rooms.slidge.im?join>`_
 
    `Bug tracker <https://codeberg.org/slidge/slidgram/issues>`_
 

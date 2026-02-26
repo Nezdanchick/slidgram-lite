@@ -40,6 +40,7 @@ when:
     cron: container-main
   - event: cron
     cron: container-latest
+  - event: manual
 
 steps:
   build-tag:
@@ -60,6 +61,7 @@ steps:
         path: *paths
       - event: cron
         cron: container-main
+      - event: manual
     image: woodpeckerci/plugin-docker-buildx:6.0.2
     settings:
       <<: *settings
