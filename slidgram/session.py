@@ -425,7 +425,8 @@ class Session(BaseSession[int, Recipient]):
 
     @log_error_on_peer_id_invalid
     async def _on_tg_edit(self, _tg: TelegramClient, message: Message) -> None:
-        if message.edit_hide:
+        # Skip edits that carry no text/caption
+        if message.text is None and message.caption is None:
             return
 
         sender, carbon = await self.get_sender(message)
