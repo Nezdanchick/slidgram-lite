@@ -29,7 +29,8 @@ RUN --mount=source=.git,target=/build/.git,type=bind \
 # (Optionnally) append .dev to the required slidge version in pyproject.toml,
 # invalidating the lockfile and setting the prerelease=allow policy for slidge.
 ARG SLIDGE_PRERELEASE=
-RUN [ ! -z "$SLIDGE_PRERELEASE" ] && \
+RUN --mount=source=.git,target=/build/.git,type=bind \
+    [ ! -z "$SLIDGE_PRERELEASE" ] && \
     sed -ri 's/(slidge.=)([^,"d]*)([,"])/\1\2.dev\3/' pyproject.toml && \
     uv sync --no-dev \
     || true
