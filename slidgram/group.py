@@ -289,9 +289,11 @@ class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int
             raise XMPPError(
                 "bad-request", f"This chat member is already {member.status}"
             )
-        elif member.status == ChatMemberStatus.LEFT:
-            if not await self.tg.add_chat_members(self.legacy_id, [contact.legacy_id]):
-                raise XMPPError("internal-server-error")
+        elif (
+            member.status == ChatMemberStatus.LEFT
+            and not await self.tg.add_chat_members(self.legacy_id, [contact.legacy_id])
+        ):
+            raise XMPPError("internal-server-error")
 
         if self.type == MucType.GROUP:
             success = await self.tg.edit_chat_admin(

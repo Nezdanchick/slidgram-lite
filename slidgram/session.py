@@ -403,10 +403,13 @@ class Session(BaseSession[int, Recipient]):
         if message.chat is not None and self.tg.is_me(message.chat.id):
             # slidge voluntarily does not support messages to self through the legacy network
             return
-        if message.service == MessageServiceType.NEW_CHAT_MEMBERS:
-            if message.chat and message.chat.type == ChatType.SUPERGROUP:
-                # maybe handled in ChatMemberUpdated? This logs a few PeerIdInvalid in supergroups
-                return
+        if (
+            message.service == MessageServiceType.NEW_CHAT_MEMBERS
+            and message.chat
+            and message.chat.type == ChatType.SUPERGROUP
+        ):
+            # maybe handled in ChatMemberUpdated? This logs a few PeerIdInvalid in supergroups
+            return
         sender, carbon = await self.get_sender(message)
         # TODO: use pyrogram's filters, eg:
         #  https://pyrofork.mayuri.my.id/main/api/filters.html#pyrogram.filters.left_chat_member
