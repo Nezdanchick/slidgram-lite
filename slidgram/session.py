@@ -1,15 +1,10 @@
 import logging
 from io import BytesIO
-from pathlib import Path
-from tempfile import TemporaryDirectory
-from typing import Never
-from urllib.parse import unquote
+from typing import TYPE_CHECKING, Never
 
-import aiohttp
 import pyrogram.raw.types as pyro_raw_types
 from PIL import Image
-from pyrogram.enums import ChatAction, ChatType, MessageServiceType
-from pyrogram.errors import FileReferenceExpired
+from pyrogram.enums import ChatType, MessageServiceType
 from pyrogram.raw.base import (  # type:ignore[attr-defined]
     Peer,
     SendMessageAction,
@@ -29,27 +24,23 @@ from pyrogram.utils import get_channel_id
 from slidge import BaseSession
 from slidge.command import FormField, SearchResult
 from slidge.db import GatewayUser
-from slidge.util.types import Mention, RecipientType, Sticker
 from slixmpp.exceptions import XMPPError
 
-from .contact import Contact, Roster
 from .errors import (
     ignore_event_on_peer_id_invalid,
     log_error_on_peer_id_invalid,
     tg_to_xmpp_errors,
 )
-from .gateway import Gateway
-from .group import MUC, Bookmarks, Participant
 from .telegram import Client as TelegramClient
-from .text_entities import styling_to_entities
 
-Recipient = Contact | MUC
+if TYPE_CHECKING:
+    from .contact import Contact, Roster
+    from .group import MUC, Bookmarks, Participant
 
 
-class Session(BaseSession[int, Recipient]):
-    xmpp: Gateway
-    bookmarks: Bookmarks
-    contacts: Roster
+class Session(BaseSession["Contact"]):
+    bookmarks: "Bookmarks"
+    contacts: "Roster"
 
     def __init__(self, user: GatewayUser) -> None:
         super().__init__(user)
@@ -86,7 +77,7 @@ class Session(BaseSession[int, Recipient]):
         await self.tg.start()
         me = self.tg.me
         assert me is not None
-        self.contacts.user_legacy_id = me.id
+        self.contacts.user_legacy_id = str(me.id)
         my_name = me.full_name.strip()
         self.bookmarks.user_nick = my_name
         return f"Connected as {my_name}"
@@ -95,252 +86,14 @@ class Session(BaseSession[int, Recipient]):
     async def logout(self) -> None:
         await self.tg.stop()
 
-    # The following three chat states have no equivalent in telegram. if we don't override this
-    # slidge will send a msg/error/feature-not-implemented for clients which actually send
-    # those, such as psi. A lot of clients will just dismiss such errors, but some (again, psi)
-    # will display them. Since chat states are effectively supported for "composing", "paused",
-    # and "active" when the message has a body, it makes sense to not reply "feature-not-implemented",
-    # especially since contacts advertise support for chat states in their disco#features.
-    # This could (maybe should) be improved in slidge core, but this fix is good enough for now.
-    async def on_active(self, *_args, **_kwargs) -> None:  # type:ignore[no-untyped-def]  # noqa
-        pass
-
-    async def on_inactive(self, *_args, **_kwargs) -> None:  # type:ignore[no-untyped-def]  # noqa
-        pass
-
-    async def on_gone(self, *_args, **_kwargs) -> None:  # type:ignore[no-untyped-def]  # noqa
-        pass
-
-    async def on_presence(self, *_args, **_kwargs) -> None:  # type:ignore[no-untyped-def]  # noqa
-        pass
-
     @tg_to_xmpp_errors
-    async def on_text(  # type:ignore[no-untyped-def]
-        self,
-        /,
-        chat: Recipient,
-        text: str,
-        *,
-        reply_to_msg_id: int | None = None,
-        mentions: list[Mention] | None = None,
-        **_kwargs,  # noqa
-    ) -> int:
-        text, entities = await styling_to_entities(text, mentions)
-        message = await self.tg.send_message(
-            chat.legacy_id,
-            text,
-            reply_to_message_id=reply_to_msg_id,  # type:ignore
-            entities=entities,
-        )
-        return message.id
-
-    @tg_to_xmpp_errors
-    async def on_correct(  # type:ignore[no-untyped-def]
-        self,
-        /,
-        chat: Recipient,
-        text: str,
-        legacy_msg_id: int,
-        *,
-        reply_to_msg_id: int | None = None,
-        mentions: list[Mention] | None = None,
-        **_kwargs,  # noqa
-    ) -> None:
-        text, entities = await styling_to_entities(text, mentions)
-        await self.tg.edit_message_text(
-            chat.legacy_id,
-            legacy_msg_id,
-            text,
-            entities=entities,
-        )
-
-    @tg_to_xmpp_errors
-    async def on_file(  # type:ignore[no-untyped-def]
-        self,
-        /,
-        chat: RecipientType,
-        url: str,
-        *,
-        http_response: aiohttp.ClientResponse,
-        reply_to_msg_id: int | None = None,
-        **_kwargs,  # noqa
-    ) -> int:
-        file_name = unquote(url.split("/")[-1])
-        content_type = http_response.content_type
-        # we cannot use TemporaryFile() because pyrofork checks whether fp is
-        # an io.IOBase instance, which it is not, despite implementing seek(),
-        # tell(), and read()
-        with (
-            TemporaryDirectory() as tmp_dir,
-            (Path(tmp_dir) / file_name).open("ab+") as fp,
-        ):
-            async for chunk in http_response.content:
-                fp.write(chunk)
-            if content_type.startswith("audio"):
-                message = await self.tg.send_audio(
-                    chat.legacy_id,
-                    fp,
-                    file_name=file_name,  # pyrofork includes the full path without that
-                    reply_to_message_id=reply_to_msg_id,  # type:ignore
-                )
-            elif content_type.startswith("video"):
-                message = await self.tg.send_video(
-                    chat.legacy_id,
-                    fp,
-                    file_name=file_name,
-                    reply_to_message_id=reply_to_msg_id,  # type:ignore
-                )
-            elif content_type.startswith("image"):
-                message = await self.tg.send_photo(
-                    chat.legacy_id,
-                    fp,
-                    reply_to_message_id=reply_to_msg_id,  # type:ignore
-                )
-            else:
-                message = await self.tg.send_document(
-                    chat.legacy_id,
-                    fp,
-                    file_name=file_name,
-                    reply_to_message_id=reply_to_msg_id,  # type:ignore
-                )
-        if message is None:
-            raise XMPPError(
-                "internal-server-error", "Telegram did not confirm this message"
-            )
-        return message.id
-
-    @tg_to_xmpp_errors
-    async def on_sticker(  # type:ignore[no-untyped-def]
-        self,
-        /,
-        chat: Recipient,
-        sticker: Sticker,
-        *,
-        reply_to_msg_id: int | None = None,
-        **_kwargs,  # noqa
-    ) -> int:
-        stickers = self.user.legacy_module_data.get("stickers", {})
-        assert isinstance(stickers, dict)
-        h = sticker.hashes["sha_512"]
-        assert isinstance(h, str)
-        if (file_id := stickers.get(h)) is None:
-            self.log.debug("Uploading a new sticker")
-            return await self.__new_sticker(chat, sticker, reply_to_msg_id)
-        self.log.debug("Reusing a previous sticker")
-        assert isinstance(file_id, str)
-        try:
-            message = await self.tg.send_sticker(
-                chat.legacy_id,
-                file_id,
-                reply_to_message_id=reply_to_msg_id,  # type:ignore
-            )
-        except FileReferenceExpired:
-            self.log.warning("Sticker has expired, sending it again")
-            return await self.__new_sticker(chat, sticker, reply_to_msg_id)
-        assert message is not None
-        return message.id
-
-    async def __new_sticker(
-        self, chat: Recipient, sticker: Sticker, reply_to_msg_id: int | None
-    ) -> int:
-        stickers = self.user.legacy_module_data.get("stickers", {})
-        if sticker.content_type != "image/webp" and (
-            (img := Image.open(sticker.path)).format != "WEBP"
-        ):
-            with BytesIO() as fp:
-                await self.xmpp.loop.run_in_executor(None, img.save, fp, "WEBP")
-                fp.flush()
-                fp.seek(0)
-                fp.name = "xmpp-sticker.webp"
-                message = await self.tg.send_sticker(
-                    chat.legacy_id,
-                    fp,
-                    reply_to_message_id=reply_to_msg_id,  # type:ignore
-                )
-        else:
-            message = await self.tg.send_sticker(
-                chat.legacy_id,
-                str(sticker.path),
-                reply_to_message_id=reply_to_msg_id,  # type:ignore
-            )
-        assert message is not None
-        if message.sticker is None:
-            self.log.warning("%s was not sent as a sticker.", sticker.path)
-            return message.id
-        stickers[sticker.hashes["sha_512"]] = message.sticker.file_id  # type:ignore
-        self.legacy_module_data_update({"stickers": stickers})
-        return message.id
-
-    @tg_to_xmpp_errors
-    async def on_react(  # type:ignore[override]
-        self,
-        chat: Recipient,
-        legacy_msg_id: int,
-        emojis: list[str],
-        thread: int | None = None,
-    ) -> None:
-        await self.tg.send_reaction(
-            chat.legacy_id,
-            legacy_msg_id,
-            emoji=emojis,  # type:ignore
-        )
-
-    @tg_to_xmpp_errors
-    async def on_composing(  # type:ignore[override]
-        self, chat: RecipientType, thread: int | None = None
-    ) -> None:
-        await self.tg.send_chat_action(chat.legacy_id, ChatAction.TYPING)
-
-    @tg_to_xmpp_errors
-    async def on_paused(self, chat: RecipientType, thread: int | None = None) -> None:  # type:ignore[override]
-        await self.tg.send_chat_action(chat.legacy_id, ChatAction.CANCEL)
-
-    @tg_to_xmpp_errors
-    async def on_displayed(  # type:ignore[override]
-        self, chat: RecipientType, legacy_msg_id: int, thread: int | None = None
-    ) -> None:
-        await self.tg.read_chat_history(chat.legacy_id, legacy_msg_id)
-
-    @tg_to_xmpp_errors
-    async def on_moderate(  # type:ignore[override]
-        self,
-        muc: MUC,
-        legacy_msg_id: int,
-        reason: str | None,
-    ) -> None:
-        if (
-            await self.tg.delete_messages(muc.legacy_id, [legacy_msg_id], revoke=True)
-            == 0
-        ):
-            raise XMPPError(
-                "internal-server-error", "Telegram did not accept this message deletion"
-            )
-        me = await muc.get_user_participant()
-        me.moderate(legacy_msg_id)
-
-    @tg_to_xmpp_errors
-    async def on_create_group(  # type:ignore
+    async def on_create_group(
         self,
         name: str,
-        contacts: list[Contact],
-    ) -> int:
-        group = await self.tg.create_group(name, [c.legacy_id for c in contacts])
-        return group.id
-
-    @tg_to_xmpp_errors
-    async def on_invitation(  # type:ignore[override]
-        self, contact: Contact, muc: MUC, reason: str | None
-    ) -> None:
-        await self.tg.add_chat_members(muc.legacy_id, contact.legacy_id)
-
-    @tg_to_xmpp_errors
-    async def on_retract(  # type:ignore[override]
-        self,
-        chat: Recipient,
-        legacy_msg_id: int,
-        thread: int | None = None,
-    ) -> None:
-        await self.tg.delete_messages(chat.legacy_id, [legacy_msg_id], revoke=True)
+        contacts: list["Contact"],
+    ) -> str:
+        group = await self.tg.create_group(name, [c.tg_id for c in contacts])
+        return str(group.id)
 
     async def on_avatar(
         self,
@@ -412,8 +165,8 @@ class Session(BaseSession[int, Recipient]):
         )
 
     @tg_to_xmpp_errors
-    async def on_leave_group(self, chat_id: int) -> None:  # type:ignore[override]  # ty:ignore[unused]
-        await self.tg.leave_chat(chat_id)
+    async def on_leave_group(self, chat_id: str) -> None:
+        await self.tg.leave_chat(int(chat_id))
 
     @log_error_on_peer_id_invalid
     async def _on_tg_msg(self, _tg: TelegramClient, message: Message) -> None:
@@ -431,14 +184,14 @@ class Session(BaseSession[int, Recipient]):
         # TODO: use pyrogram's filters, eg:
         #  https://pyrofork.mayuri.my.id/main/api/filters.html#pyrogram.filters.left_chat_member
         if (
-            isinstance(sender, Participant)
+            sender.is_participant
             and sender.is_user
             and message.service == MessageServiceType.LEFT_CHAT_MEMBERS
         ):
             # after leaving, we cache deleted message events, and they re-spawn
             # the MUC in slidge's DB if these message could be resolved.
             # Removing them from the cache solves the issue.
-            self.tg.message_cache.remove_chat(sender.muc.legacy_id)
+            self.tg.message_cache.remove_chat(sender.muc.tg_id)
             await self.bookmarks.remove(sender.muc)
             return
         await sender.send_tg_msg(message, carbon=carbon)
@@ -470,8 +223,8 @@ class Session(BaseSession[int, Recipient]):
     async def _on_tg_chat_member(
         self, _tg: TelegramClient, update: ChatMemberUpdated
     ) -> None:
-        muc = await self.bookmarks.by_legacy_id(update.chat.id)
-        part = await muc.get_participant_by_legacy_id(update.new_chat_member.user.id)
+        muc = await self.bookmarks.by_tg_id(update.chat.id)
+        part = await muc.get_participant_by_tg_id(update.new_chat_member.user.id)
         part.update_tg_member(update.new_chat_member)
 
     # this is a handler for a custom event we added to our pyrogram.Client
@@ -485,16 +238,16 @@ class Session(BaseSession[int, Recipient]):
 
         if message.chat.type in (ChatType.PRIVATE, ChatType.BOT):
             if self.tg.is_me(user_id):
-                contact = await self.contacts.by_legacy_id(message.chat.id)
-                contact.react(message.id, emojis, carbon=True)
+                contact = await self.contacts.by_tg_id(message.chat.id)
+                contact.react(str(message.id), emojis, carbon=True)
             else:
-                contact = await self.contacts.by_legacy_id(user_id)
-                contact.react(message.id, emojis)
+                contact = await self.contacts.by_tg_id(user_id)
+                contact.react(str(message.id), emojis)
             return
 
-        muc = await self.bookmarks.by_legacy_id(message.chat.id)
-        participant = await muc.get_participant_by_legacy_id(user_id)
-        participant.react(message.id, emojis)
+        muc = await self.bookmarks.by_tg_id(message.chat.id)
+        participant = await muc.get_participant_by_tg_id(user_id)
+        participant.react(str(message.id), emojis)
 
     @ignore_event_on_peer_id_invalid
     async def _on_tg_deleted_msg(
@@ -510,9 +263,9 @@ class Session(BaseSession[int, Recipient]):
                 continue
             sender, carbon = await self.get_sender(message)
             if hasattr(sender, "muc"):
-                sender.muc.get_system_participant().moderate(message.id)
+                sender.muc.get_system_participant().moderate(str(message.id))
             else:
-                sender.retract(message.id, carbon=carbon)
+                sender.retract(str(message.id), carbon=carbon)
 
     # these are "raw" telegram updates that are not processed at all by
     # pyrogram
@@ -560,9 +313,9 @@ class Session(BaseSession[int, Recipient]):
         _users: object,
         _chats: object,
     ) -> None:
-        muc = await self.bookmarks.by_legacy_id(-update.chat_id)
+        muc = await self.bookmarks.by_tg_id(-update.chat_id)
         if isinstance(update.from_id, pyro_raw_types.PeerUser):
-            actor = await muc.get_participant_by_legacy_id(update.from_id.user_id)
+            actor = await muc.get_participant_by_tg_id(update.from_id.user_id)
         else:
             self.log.warning("Unknown peer: %s", update)
             return
@@ -575,16 +328,16 @@ class Session(BaseSession[int, Recipient]):
         _users: object,
         _chats: object,
     ) -> None:
-        muc = await self.bookmarks.by_legacy_id(get_channel_id(update.channel_id))
+        muc = await self.bookmarks.by_tg_id(get_channel_id(update.channel_id))
         if isinstance(update.from_id, pyro_raw_types.PeerUser):
-            actor = await muc.get_participant_by_legacy_id(update.from_id.user_id)
+            actor = await muc.get_participant_by_tg_id(update.from_id.user_id)
         else:
             self.log.warning("Unknown peer: %s", update)
             return
         self._send_action(actor, update.action)
 
     def _send_action(
-        self, actor: Contact | Participant, action: SendMessageAction
+        self, actor: "Contact | Participant", action: SendMessageAction
     ) -> None:
         if isinstance(action, _COMPOSING_TYPES):
             actor.composing()
@@ -601,7 +354,7 @@ class Session(BaseSession[int, Recipient]):
         _chats: object,
     ) -> None:
         actor = await self._get_actor_by_peer(update.peer)
-        actor.displayed(update.max_id)
+        actor.displayed(str(update.max_id))
 
     @ignore_event_on_peer_id_invalid
     async def _on_tg_UpdateReadHistoryInbox(
@@ -616,7 +369,7 @@ class Session(BaseSession[int, Recipient]):
             # self-message through telegram are not supported
             return
         actor = await self._get_actor_by_peer(update.peer, user=True)
-        actor.displayed(update.max_id, carbon=True)
+        actor.displayed(str(update.max_id), carbon=True)
 
     @ignore_event_on_peer_id_invalid
     async def _on_tg_UpdateReadChannelInbox(
@@ -625,9 +378,9 @@ class Session(BaseSession[int, Recipient]):
         _users: object,
         _chats: object,
     ) -> None:
-        muc = await self.bookmarks.by_legacy_id(get_channel_id(update.channel_id))
+        muc = await self.bookmarks.by_tg_id(get_channel_id(update.channel_id))
         part = await muc.get_user_participant()
-        part.displayed(update.max_id)
+        part.displayed(str(update.max_id))
 
     @log_error_on_peer_id_invalid
     async def _on_tg_UpdatePinnedMessages(
@@ -678,28 +431,26 @@ class Session(BaseSession[int, Recipient]):
     ) -> None:
         for channel in chats.values():
             if channel.left:
-                muc = await self.bookmarks.by_legacy_id(
-                    get_channel_id(update.channel_id)
-                )
-                self.tg.message_cache.remove_chat(muc.legacy_id)
+                muc = await self.bookmarks.by_tg_id(get_channel_id(update.channel_id))
+                self.tg.message_cache.remove_chat(muc.tg_id)
                 await self.bookmarks.remove(muc)
 
     async def get_sender(
         self,
         update: Message | MessageReactionUpdated,
-    ) -> tuple[Contact | Participant, bool]:
+    ) -> tuple["Contact | Participant", bool]:
         if update.chat.type in (ChatType.PRIVATE, ChatType.BOT):
             if self.tg.is_me(update.from_user):
                 return await self.contacts.by_legacy_id(update.chat.id), True
             else:
                 return await self.contacts.by_legacy_id(update.from_user.id), False
 
-        muc = await self.bookmarks.by_legacy_id(update.chat.id)
+        muc = await self.bookmarks.by_tg_id(update.chat.id)
         if update.from_user is not None:
-            return await muc.get_participant_by_legacy_id(update.from_user.id), False
+            return await muc.get_participant_by_tg_id(update.from_user.id), False
         if update.sender_business_bot is not None:
             return (
-                await muc.get_participant_by_legacy_id(update.sender_business_bot.id),
+                await muc.get_participant_by_tg_id(update.sender_business_bot.id),
                 False,
             )
         if update.sender_chat or update.chat.type == ChatType.CHANNEL:
@@ -709,26 +460,26 @@ class Session(BaseSession[int, Recipient]):
 
     async def _get_actor_by_peer(
         self, peer: Peer, user: bool = False
-    ) -> Contact | Participant:
+    ) -> "Contact | Participant":
         if isinstance(peer, pyro_raw_types.PeerUser):
-            return await self.contacts.by_legacy_id(peer.user_id)  # type:ignore[no-any-return]
+            return await self.contacts.by_tg_id(peer.user_id)
         elif isinstance(peer, pyro_raw_types.PeerChat):
-            muc = await self.bookmarks.by_legacy_id(-peer.chat_id)
+            muc = await self.bookmarks.by_tg_id(-peer.chat_id)
         elif isinstance(peer, PeerChannel):
-            muc = await self.bookmarks.by_legacy_id(get_channel_id(peer.channel_id))
+            muc = await self.bookmarks.by_tg_id(get_channel_id(peer.channel_id))
         else:
             raise RuntimeError("Invalid peer", peer)
         if user:
             return await muc.get_user_participant()
         return muc.get_system_participant()
 
-    async def _get_muc_by_peer(self, peer: Peer) -> MUC | None:
+    async def _get_muc_by_peer(self, peer: Peer) -> "MUC | None":
         if isinstance(peer, pyro_raw_types.PeerUser):
             return None
         if isinstance(peer, pyro_raw_types.PeerChat):
-            return await self.bookmarks.by_legacy_id(-peer.chat_id)
+            return await self.bookmarks.by_tg_id(-peer.chat_id)
         if isinstance(peer, (PeerChannel, pyro_raw_types.PeerChannel)):
-            return await self.bookmarks.by_legacy_id(get_channel_id(peer.channel_id))
+            return await self.bookmarks.by_tg_id(get_channel_id(peer.channel_id))
         return None
 
 

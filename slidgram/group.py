@@ -25,6 +25,7 @@ from slixmpp.exceptions import XMPPError
 from .avatar import SetAvatarMixin
 from .errors import tg_to_xmpp_errors, tg_to_xmpp_errors_it
 from .reactions import ReactionsMixin
+from .recipient import RecipientMixin
 from .telegram import Client
 from .text_entities import entities_to_xep_0393
 from .tg_msg import TelegramMessageSenderMixin
@@ -34,20 +35,22 @@ if TYPE_CHECKING:
     from .session import Session
 
 
-class Bookmarks(LegacyBookmarks[int, "MUC"]):
+class Bookmarks(LegacyBookmarks["MUC"]):
     session: "Session"
 
     @property
     def tg(self) -> Client:
         return self.session.tg
 
-    @staticmethod
-    async def legacy_id_to_jid_local_part(legacy_id: int) -> str:
-        return "group" + str(legacy_id)
+    async def by_tg_id(self, tg_id: int) -> "MUC":
+        return await self.by_legacy_id(str(tg_id))
 
-    async def jid_local_part_to_legacy_id(self, local_part: str) -> int:
+    async def legacy_id_to_jid_local_part(self, legacy_id: str) -> str:
+        return "group" + legacy_id
+
+    async def jid_local_part_to_legacy_id(self, local_part: str) -> str:
         try:
-            chat_id = int(local_part.replace("group", ""))
+            chat_id = local_part.replace("group", "")
         except ValueError:
             raise XMPPError(
                 "bad-request",
@@ -77,7 +80,7 @@ class Bookmarks(LegacyBookmarks[int, "MUC"]):
                     # destroyed groups or groups that have been left
                     continue
                 try:
-                    muc = await self.by_legacy_id(dialog.chat.id)
+                    muc = await self.by_tg_id(dialog.chat.id)
                 except XMPPError:
                     continue
                 await muc.add_to_bookmarks(
@@ -85,15 +88,21 @@ class Bookmarks(LegacyBookmarks[int, "MUC"]):
                 )
 
 
-class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int]):  # type:ignore[misc]
+class MUC(ReactionsMixin, RecipientMixin, SetAvatarMixin, LegacyMUC["Participant"]):
     session: "Session"
-    legacy_id: int
 
     def __init__(self, *a, **kw) -> None:  # type:ignore[no-untyped-def]  # noqa
         super().__init__(*a, **kw)
         self.pinned_message_ids = list[int]()
         # key = topic.id; value = last broadcast UNIX timestamp
         self.threads_title_broadcasted = dict[int, float]()
+
+    @property
+    def tg_id(self) -> int:
+        return int(self.legacy_id)
+
+    async def get_participant_by_tg_id(self, tg_id: int) -> "Participant":
+        return await self.get_participant_by_legacy_id(str(tg_id))
 
     async def on_invalid_key(self) -> Never:
         await self.session.on_invalid_key()
@@ -103,14 +112,14 @@ class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int
         return self.session.tg
 
     @tg_to_xmpp_errors
-    async def update_info(self, /) -> None:
+    async def update_info(self) -> None:
         try:
-            await self.tg.get_chat_member(self.legacy_id, "me")
+            await self.tg.get_chat_member(self.tg_id, "me")
         except UserNotParticipant:
             raise XMPPError(
                 "subscription-required", "You are not a member of this group."
             )
-        chat = await self.tg.get_chat(self.legacy_id)
+        chat = await self.tg.get_chat(self.tg_id)
 
         self.name = chat.title
         self.n_participants = chat.members_count
@@ -140,21 +149,22 @@ class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int
     @tg_to_xmpp_errors_it
     async def fill_participants(self) -> AsyncIterator["Participant"]:
         if self.type == MucType.CHANNEL:
-            me = await self.get_user_participant()
+            me: Participant | None = await self.get_user_participant()
+            assert me is not None
             me.role = "visitor"
             yield me
             return
 
-        me = None  # type:ignore
-        me_member = None
-        it = self.tg.get_chat_members(self.legacy_id, limit=100)
+        me = None
+        me_member: ChatMember | None = None
+        it = self.tg.get_chat_members(self.tg_id, limit=100)
         assert it is not None
         async for member in it:
             if member.user is None:
                 self.log.debug("Member but no user: %s", member)
                 continue
 
-            participant = await self.get_participant_by_legacy_id(member.user.id)
+            participant = await self.get_participant_by_tg_id(member.user.id)
             participant.update_tg_member(member)
             if participant.is_user:
                 me = participant
@@ -164,7 +174,7 @@ class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int
 
         if me is None or me_member is None:
             me = await self.get_user_participant()
-            me_member = await self.tg.get_chat_member(self.legacy_id, "me")
+            me_member = await self.tg.get_chat_member(self.tg_id, "me")
         me.update_tg_member(me_member)
         yield me
 
@@ -177,10 +187,10 @@ class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int
         now = datetime.now()
         self.log.debug("Fetching history between %s and %s", after, before)
         it = self.tg.get_chat_history(
-            chat_id=self.legacy_id,
+            chat_id=self.tg_id,
             limit=0,
-            offset_id=0 if before is None else before.id,  # type:ignore
-            min_id=0 if after is None else after.id,  # type:ignore
+            offset_id=0 if before is None else int(before.id),
+            min_id=0 if after is None else int(after.id),
         )
         assert it is not None
         async for msg in it:
@@ -193,36 +203,9 @@ class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int
             except Exception as e:
                 self.log.warning("Could not backfill message: %s", e)
                 if msg.text:
-                    sender.send_text(msg.text, legacy_msg_id=msg.id, archive_only=True)
-
-    @tg_to_xmpp_errors
-    async def on_set_affiliation(  # type:ignore[override]
-        self,
-        contact: "Contact",
-        affiliation: MucAffiliation,
-        reason: str | None,
-        nickname: str | None,
-    ) -> None:
-        member = await self.tg.get_chat_member(self.legacy_id, contact.legacy_id)
-
-        if affiliation == "outcast":
-            await self._on_ban(member, contact)
-
-        elif affiliation == "member":
-            await self._on_set_member(member, contact)
-
-        elif affiliation in ("admin", "owner"):
-            await self._on_set_admin(member, contact)
-
-    @tg_to_xmpp_errors
-    async def on_kick(  # type:ignore[override]
-        self,
-        contact: "Contact",
-        reason: str | None,
-        nickname: str | None,
-    ) -> None:
-        member = await self.tg.get_chat_member(self.legacy_id, contact.legacy_id)
-        await self._on_ban(member, contact, datetime.now(tz=UTC) + timedelta(minutes=5))
+                    sender.send_text(
+                        msg.text, legacy_msg_id=str(msg.id), archive_only=True
+                    )
 
     async def _on_ban(
         self, member: ChatMember, contact: "Contact", until: datetime = zero_datetime()
@@ -242,8 +225,8 @@ class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int
                 "bad-request",
                 f"{contact.name} has already left {self.name}.",
             )
-        if await self.tg.ban_chat_member(self.legacy_id, contact.legacy_id, until):
-            participant = await self.get_participant_by_legacy_id(contact.legacy_id)
+        if await self.tg.ban_chat_member(self.tg_id, contact.tg_id, until):
+            participant = await self.get_participant_by_tg_id(self.tg_id)
             participant.affiliation = "outcast"
             participant.role = "none"
         else:
@@ -251,27 +234,25 @@ class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int
 
     async def _on_set_member(self, member: ChatMember, contact: "Contact") -> None:
         if member.status == ChatMemberStatus.BANNED:
-            success = await self.tg.unban_chat_member(self.legacy_id, contact.legacy_id)
+            success = await self.tg.unban_chat_member(self.tg_id, contact.tg_id)
         elif member.status == ChatMemberStatus.RESTRICTED:
             await self.tg.restrict_chat_member(
-                self.legacy_id,
-                contact.legacy_id,
+                self.tg_id,
+                contact.tg_id,
                 permissions=ChatPermissions(all_perms=True),
             )
             success = True
         elif member.status == ChatMemberStatus.LEFT:
-            success = await self.tg.add_chat_members(
-                self.legacy_id, [contact.legacy_id]
-            )
+            success = await self.tg.add_chat_members(self.tg_id, [contact.tg_id])
         elif member.status == ChatMemberStatus.ADMINISTRATOR:
             if self.type == MucType.GROUP:
                 success = await self.tg.edit_chat_admin(
-                    self.legacy_id, contact.legacy_id, False
+                    self.tg_id, contact.tg_id, False
                 )
             else:
                 success = await self.tg.promote_chat_member(
-                    self.legacy_id,
-                    contact.legacy_id,
+                    self.tg_id,
+                    contact.tg_id,
                     _NO_PRIVILEGES,
                 )
         elif member.status == ChatMemberStatus.MEMBER:
@@ -283,7 +264,7 @@ class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int
             raise XMPPError("bad-request", "The chat owner cannot be demoted")
 
         if success:
-            participant = await self.get_participant_by_legacy_id(contact.legacy_id)
+            participant = await self.get_participant_by_tg_id(contact.tg_id)
             participant.affiliation = "member"
             participant.role = "participant"
         else:
@@ -296,21 +277,19 @@ class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int
             )
         elif (
             member.status == ChatMemberStatus.LEFT
-            and not await self.tg.add_chat_members(self.legacy_id, [contact.legacy_id])
+            and not await self.tg.add_chat_members(self.tg_id, [contact.tg_id])
         ):
             raise XMPPError("internal-server-error")
 
         if self.type == MucType.GROUP:
-            success = await self.tg.edit_chat_admin(
-                self.legacy_id, contact.legacy_id, True
-            )
+            success = await self.tg.edit_chat_admin(self.tg_id, contact.tg_id, True)
         else:
             success = await self.tg.promote_chat_member(
-                self.legacy_id, contact.legacy_id, _ALL_PRIVILEGES
+                self.tg_id, contact.tg_id, _ALL_PRIVILEGES
             )
 
         if success:
-            participant = await self.get_participant_by_legacy_id(contact.legacy_id)
+            participant = await self.get_participant_by_tg_id(contact.tg_id)
             participant.affiliation = "admin"
             participant.role = "moderator"
         else:
@@ -325,14 +304,14 @@ class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int
         name = name or ""
         description = description or ""
         if name != self.name:
-            if await self.tg.set_chat_title(self.legacy_id, name):
+            if await self.tg.set_chat_title(self.tg_id, name):
                 self.name = name
             else:
                 raise XMPPError(
                     "internal-server-error", f"While trying to rename {self.name}"
                 )
         if description != self.description:
-            if await self.tg.set_chat_description(self.legacy_id, description):
+            if await self.tg.set_chat_description(self.tg_id, description):
                 self.description = description
             else:
                 raise XMPPError(
@@ -343,11 +322,11 @@ class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int
     @tg_to_xmpp_errors
     async def on_destroy_request(self, reason: str | None) -> None:
         if self.type == MucType.CHANNEL_NON_ANONYMOUS:
-            success = await self.tg.delete_supergroup(self.legacy_id)
+            success = await self.tg.delete_supergroup(self.tg_id)
         elif self.type == MucType.CHANNEL:
-            success = await self.tg.delete_channel(self.legacy_id)
+            success = await self.tg.delete_channel(self.tg_id)
         else:
-            await self.tg.leave_chat(self.legacy_id, delete=True)
+            await self.tg.leave_chat(self.tg_id, delete=True)
             success = True
 
         if not success:
@@ -356,10 +335,10 @@ class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int
     @tg_to_xmpp_errors
     async def on_avatar(self, data: bytes | None, mime: str | None) -> None:
         if not data:
-            await self.tg.delete_chat_photo(self.legacy_id)
+            await self.tg.delete_chat_photo(self.tg_id)
             return
 
-        await self.tg.set_chat_photo(self.legacy_id, photo=BytesIO(data))
+        await self.tg.set_chat_photo(self.tg_id, photo=BytesIO(data))
 
     async def on_set_subject(self, subject: str) -> None:
         raise XMPPError(
@@ -425,7 +404,7 @@ class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int
             return
 
         message_id = max(self.pinned_message_ids)
-        message = await self.tg.get_messages(self.legacy_id, message_id)
+        message = await self.tg.get_messages(self.tg_id, message_id)
         assert isinstance(message, Message)
         self.set_tg_pinned_message(message)
 
@@ -454,9 +433,7 @@ class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int
                 self.log.debug("Title %s already sent", topic.title)
                 return
             if isinstance(topic.from_id, PeerUser):
-                participant = await self.get_participant_by_legacy_id(
-                    topic.from_id.user_id
-                )
+                participant = await self.get_participant_by_tg_id(topic.from_id.user_id)
                 self.refresh()
             elif isinstance(topic.from_id, PeerChannel):
                 participant = self.get_system_participant()
@@ -464,12 +441,28 @@ class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int
                 self.log.debug("Cannot tell who set that title: %s", topic.from_id)
                 participant = self.get_system_participant()
             self.log.debug("Sending thread title %s", topic.title)
-            participant.set_thread_subject(topic.id, topic.title)
+            participant.set_thread_subject(str(topic.id), topic.title)
             self.threads_title_broadcasted[topic.id] = time.time()
             self.commit()
 
+    @tg_to_xmpp_errors
+    async def on_moderate(
+        self,
+        legacy_msg_id: str,
+        reason: str | None,
+    ) -> None:
+        if (
+            await self.tg.delete_messages(self.tg_id, [int(legacy_msg_id)], revoke=True)
+            == 0
+        ):
+            raise XMPPError(
+                "internal-server-error", "Telegram did not accept this message deletion"
+            )
+        me = await self.get_user_participant()
+        me.moderate(legacy_msg_id)
 
-class Participant(TelegramMessageSenderMixin, LegacyParticipant):  # type:ignore[misc]
+
+class Participant(TelegramMessageSenderMixin, LegacyParticipant["Contact"]):
     muc: MUC
 
     async def send_tg_msg(
@@ -488,7 +481,7 @@ class Participant(TelegramMessageSenderMixin, LegacyParticipant):  # type:ignore
             self.muc.name = message.new_chat_title
         if message.new_chat_members is not None:
             for tg_user in message.new_chat_members:
-                await self.muc.get_participant_by_legacy_id(tg_user.id)
+                await self.muc.get_participant_by_tg_id(tg_user.id)
         if (message.group_chat_created is not None and message.group_chat_created) or (
             message.supergroup_chat_created and message.supergroup_chat_created
         ):
@@ -529,6 +522,41 @@ class Participant(TelegramMessageSenderMixin, LegacyParticipant):  # type:ignore
                     )
                 ]
             )
+
+    @tg_to_xmpp_errors
+    async def on_set_affiliation(
+        self,
+        affiliation: MucAffiliation,
+        reason: str | None,
+        nickname: str | None,
+    ) -> None:
+        assert self.contact is not None
+        member = await self.tg.get_chat_member(self.muc.tg_id, self.contact.tg_id)
+
+        if affiliation == "outcast":
+            await self.muc._on_ban(member, self.contact)
+
+        elif affiliation == "member":
+            await self.muc._on_set_member(member, self.contact)
+
+        elif affiliation in ("admin", "owner"):
+            await self.muc._on_set_admin(member, self.contact)
+
+    @tg_to_xmpp_errors
+    async def on_kick(self, reason: str | None) -> None:
+        assert self.contact is not None
+        member = await self.tg.get_chat_member(self.muc.tg_id, self.contact.tg_id)
+        await self.muc._on_ban(
+            member, self.contact, datetime.now(tz=UTC) + timedelta(minutes=5)
+        )
+
+    async def on_invalid_key(self) -> Never:
+        await self.session.on_invalid_key()
+
+    @tg_to_xmpp_errors
+    async def on_invitation(self, reason: str | None) -> None:
+        assert self.contact is not None
+        await self.tg.add_chat_members(self.muc.tg_id, self.contact.tg_id)
 
 
 def is_owner_privileges(privileges: ChatPrivileges | None) -> bool:

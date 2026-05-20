@@ -30,10 +30,9 @@ class Reaction(Base):
 class ReactionsMixin:
     session: "Session"
 
-    legacy_id: int
     REACTIONS_SINGLE_EMOJI = True
 
-    async def available_emojis(self, _msg_id: int | None = None) -> set[str] | None:
+    async def available_emojis(self, _msg_id: str | None = None) -> set[str] | None:
         return await self.session.tg.available_reactions()
 
 

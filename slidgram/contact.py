@@ -11,24 +11,28 @@ from slixmpp.exceptions import XMPPError
 from .avatar import SetAvatarMixin
 from .errors import tg_to_xmpp_errors, tg_to_xmpp_errors_it
 from .reactions import ReactionsMixin
+from .recipient import RecipientMixin
 from .tg_msg import TelegramMessageSenderMixin
 
 if TYPE_CHECKING:
-    from .gateway import Gateway
     from .session import Session
 
 
-class Roster(LegacyRoster[int, "Contact"]):
+class Roster(LegacyRoster["Contact"]):
     session: "Session"
 
     async def on_invalid_key(self) -> Never:
         await self.session.on_invalid_key()
 
-    async def jid_username_to_legacy_id(self, jid_username: str) -> int:
+    async def by_tg_id(self, tg_id: int) -> "Contact":
+        return await self.by_legacy_id(str(tg_id))
+
+    async def jid_username_to_legacy_id(self, jid_username: str) -> str:
         try:
-            return int(jid_username)
+            int(jid_username)
         except ValueError:
             raise XMPPError("bad-request", f"Not an integer: {jid_username}")
+        return jid_username
 
     @tg_to_xmpp_errors_it
     async def fill(self) -> AsyncIterator["Contact"]:
@@ -39,18 +43,17 @@ class Roster(LegacyRoster[int, "Contact"]):
             yield await self.by_legacy_id(user.id)
 
 
-class Contact(  # type:ignore[misc]
-    ReactionsMixin, TelegramMessageSenderMixin, SetAvatarMixin, LegacyContact[int]
+class Contact(
+    RecipientMixin,
+    ReactionsMixin,
+    TelegramMessageSenderMixin,
+    SetAvatarMixin,
+    LegacyContact,
 ):
-    xmpp: "Gateway"
     session: "Session"
-    legacy_id: int
 
     async def get_tg_user(self) -> User:
-        return await self.session.tg.get_user(self.legacy_id)
-
-    async def on_invalid_key(self) -> Never:
-        await self.session.on_invalid_key()
+        return await self.session.tg.get_user(self.tg_id)
 
     @tg_to_xmpp_errors
     async def update_info(self) -> None:

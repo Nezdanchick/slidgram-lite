@@ -1,5 +1,4 @@
 import logging
-import typing
 
 import sqlalchemy as sa
 from pyrogram import Client
@@ -7,10 +6,7 @@ from pyrogram.errors import AuthKeyUnregistered, SessionPasswordNeeded
 from pyrogram.types import User as TGUser
 from slidge import BaseGateway, global_config
 from slidge.command import FormField
-from slidge.command.register import (
-    RegistrationType,
-    TwoFactorNotRequired,
-)
+from slidge.command.register import RegistrationType, TwoFactorNotRequired
 from slidge.db.meta import JSONSerializable
 from slidge.db.models import GatewayUser
 from slidge.util.util import is_valid_phone_number
@@ -18,9 +14,7 @@ from slixmpp import JID
 from slixmpp.exceptions import XMPPError
 
 from . import config, reactions
-
-if typing.TYPE_CHECKING:
-    from .session import Session
+from .session import Session
 
 REGISTRATION_INSTRUCTIONS = (
     "You need to create a telegram account in an official telegram client.\n\nThen you"
@@ -30,7 +24,7 @@ REGISTRATION_INSTRUCTIONS = (
 )
 
 
-class Gateway(BaseGateway):
+class Gateway(BaseGateway[Session]):
     REGISTRATION_INSTRUCTIONS = REGISTRATION_INSTRUCTIONS
     REGISTRATION_FIELDS = [
         FormField(var="phone", label="Phone number", required=True),
@@ -61,8 +55,6 @@ class Gateway(BaseGateway):
     ]
 
     GROUPS = True
-
-    LEGACY_MSG_ID_TYPE = LEGACY_CONTACT_ID_TYPE = LEGACY_ROOM_ID_TYPE = int
 
     # telegram presences are handled server-side, remove useless option
     PREFERENCES = [
@@ -164,7 +156,7 @@ class Gateway(BaseGateway):
                 ),
             )
 
-    async def unregister(self, session: "Session") -> None:  # type:ignore[override]
+    async def unregister(self, session: "Session") -> None:
         try:
             await session.tg.log_out()
         except (AuthKeyUnregistered, ConnectionError):

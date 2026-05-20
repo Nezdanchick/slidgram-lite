@@ -27,8 +27,7 @@ from .telegram import Client, handle_flood
 from .text_entities import entities_to_xep_0393
 
 if TYPE_CHECKING:
-    from .contact import Roster
-    from .gateway import Gateway
+    from .contact import Contact, Roster
     from .group import MUC, Bookmarks, Participant
     from .session import Session
 
@@ -49,7 +48,6 @@ MSG_POLL = "/me sent a poll but this is not supported by slidgram yet"
 
 
 class TelegramMessageSenderMixin(ContentMessageMixin):
-    xmpp: "Gateway"
     session: "Session"
     log: logging.Logger
     muc: "MUC"
@@ -58,15 +56,15 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
         super().__init__(*a, **kw)
         self.send_file = handle_flood(self.send_file)  # type:ignore
 
-    async def __get_thread(self, message: Message) -> int | None:
+    async def __get_thread(self, message: Message) -> str | None:
         if message.chat.type == ChatType.SUPERGROUP:
-            return message.message_thread_id
+            return str(message.message_thread_id)
         if message.chat.type == ChatType.FORUM:
             if (topic := getattr(message, "topic", None)) is None:
                 return None
             assert isinstance(topic, ForumTopic)
             await self.muc.send_thread_subject(topic)
-            return topic.id
+            return str(topic.id)
         return None
 
     @property
@@ -105,7 +103,7 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
     ) -> None:
         self.send_text(
             self._to_message_styling(message) if text is None else text,
-            message.id,
+            str(message.id),
             reply_to=await self._get_reply_to(message.reply_to_message),
             carbon=carbon,
             correction=correction,
@@ -176,7 +174,7 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
                 if isinstance(media, (Sticker, Animation, Thumbnail))
                 else None,
             ),
-            message.id,
+            str(message.id),
             reply_to=await self._get_reply_to(message.reply_to_message),
             carbon=carbon,
             correction=correction,
@@ -209,7 +207,7 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
 
         await self.send_file(
             attachment,
-            legacy_msg_id=message.id,
+            legacy_msg_id=str(message.id),
             reply_to=await self._get_reply_to(message.reply_to_message),
             carbon=carbon,
             correction=correction,
@@ -217,15 +215,13 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
             archive_only=archive_only,
         )
 
-    async def _get_reply_to(
-        self, message: Message | None
-    ) -> MessageReference[int] | None:
+    async def _get_reply_to(self, message: Message | None) -> MessageReference | None:
         if message is None:
             return None
 
         if message.from_user is not None:
             if self.tg.is_me(message.from_user):
-                author: Literal["user"] | Participant | None = "user"
+                author: Literal["user"] | Participant | Contact | None = "user"
             else:
                 if message.chat.type in (ChatType.PRIVATE, ChatType.BOT):
                     try:
@@ -237,9 +233,9 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
                         else:
                             raise
                 else:
-                    muc = await self.bookmarks.by_legacy_id(message.chat.id)
+                    muc = await self.bookmarks.by_tg_id(message.chat.id)
                     try:
-                        author = await muc.get_participant_by_legacy_id(
+                        author = await muc.get_participant_by_tg_id(
                             message.from_user.id
                         )
                     except XMPPError as e:
@@ -258,7 +254,7 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
             author = None
 
         return MessageReference(
-            message.id,
+            str(message.id),
             author,
             self._to_message_styling(message),
         )

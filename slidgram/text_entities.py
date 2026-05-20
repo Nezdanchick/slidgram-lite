@@ -3,6 +3,7 @@ Converts telegram formatted text to XEP-0393 (message styling) strings.
 """
 
 import logging
+from collections.abc import Iterable
 
 from pyrogram.enums import MessageEntityType
 from pyrogram.types import MessageEntity
@@ -158,7 +159,7 @@ def merge_consecutive_entities(entities: list[MessageEntity]) -> list[MessageEnt
 
 
 async def styling_to_entities(
-    text: str, mentions: list[Mention] | None = None
+    text: str, mentions: Iterable[Mention] | None = None
 ) -> tuple[str, list[MessageEntity]]:
     if mentions is None:
         mentions = []
@@ -168,12 +169,14 @@ async def styling_to_entities(
     entities = []
     for formatting, offset, length, lang in blocks:
         if formatting == "mention":
+            participant = list(mentions)[0]  # FIXME: slidge core
+            # assert isinstance(participant.contact, Contact)
             entities.append(
                 MessageEntity(
                     type=MessageEntityType.TEXT_MENTION,
                     offset=offset,
                     length=length,
-                    user=await mentions.pop(0).contact.get_tg_user(),  # type:ignore
+                    user=await participant.contact.get_tg_user(),  # type:ignore[attr-defined]
                 )
             )
         elif formatting in ("code", "pre"):
@@ -182,7 +185,7 @@ async def styling_to_entities(
                     type=MessageEntityType.PRE if lang else MessageEntityType.CODE,
                     offset=offset,
                     length=length,
-                    language=lang or None,  # type:ignore
+                    language=lang or None,  # type:ignore[arg-type]
                 )
             )
         else:
