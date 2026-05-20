@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from pyrogram.enums import ChatType
 from pyrogram.types import (
@@ -23,13 +23,15 @@ from slidge.util.types import LegacyAttachment, LinkPreview, MessageReference
 from slixmpp.exceptions import XMPPError
 
 from . import config
-from .telegram import handle_flood
+from .telegram import Client, handle_flood
 from .text_entities import entities_to_xep_0393
 
 if TYPE_CHECKING:
+    from .contact import Roster
     from .gateway import Gateway
-    from .group import MUC
+    from .group import MUC, Bookmarks, Participant
     from .session import Session
+
 
 TgMediaTypes = (
     Audio
@@ -52,7 +54,7 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
     log: logging.Logger
     muc: "MUC"
 
-    def __init__(self, *a, **kw):
+    def __init__(self, *a, **kw) -> None:  # noqa
         super().__init__(*a, **kw)
         self.send_file = handle_flood(self.send_file)  # type:ignore
 
@@ -68,19 +70,23 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
         return None
 
     @property
-    def tg(self):
+    def tg(self) -> Client:
         return self.session.tg
 
     @property
-    def contacts(self):
+    def contacts(self) -> "Roster":
         return self.session.contacts
 
     @property
-    def bookmarks(self):
+    def bookmarks(self) -> "Bookmarks":
         return self.session.bookmarks
 
     async def send_tg_msg(
-        self, message: Message, carbon=False, correction=False, archive_only=False
+        self,
+        message: Message,
+        carbon: bool = False,
+        correction: bool = False,
+        archive_only: bool = False,
     ) -> None:
         if message.poll is not None:
             await self.__send_text(message, carbon, correction, archive_only, MSG_POLL)
@@ -92,11 +98,11 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
     async def __send_text(
         self,
         message: Message,
-        carbon=False,
-        correction=False,
-        archive_only=False,
+        carbon: bool = False,
+        correction: bool = False,
+        archive_only: bool = False,
         text: str | None = None,
-    ):
+    ) -> None:
         self.send_text(
             self._to_message_styling(message) if text is None else text,
             message.id,
@@ -110,7 +116,11 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
         )
 
     async def _send_media(
-        self, message: Message, carbon: bool, correction=False, archive_only=False
+        self,
+        message: Message,
+        carbon: bool,
+        correction: bool = False,
+        archive_only: bool = False,
     ) -> None:
         if message.sticker is not None and message.sticker.is_animated:
             await self.__send_sticker(message, carbon, correction, archive_only)
@@ -177,8 +187,12 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
         )
 
     async def __send_sticker(
-        self, message: Message, carbon: bool, correction=False, archive_only=False
-    ):
+        self,
+        message: Message,
+        carbon: bool,
+        correction: bool = False,
+        archive_only: bool = False,
+    ) -> None:
         sticker = message.sticker
         sticker_id = sticker.file_unique_id
         tgs_path = lottie.sticker_path(sticker_id).with_suffix(".tgs")
@@ -186,6 +200,7 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
         async with _sticker_download_lock:
             if not tgs_path.exists():
                 downloader = self.tg.get_downloader(sticker.file_id)
+                assert downloader is not None
                 with tgs_path.open("wb") as fp:
                     async for chunk in downloader:
                         fp.write(chunk)
@@ -208,7 +223,7 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
 
         if message.from_user is not None:
             if self.tg.is_me(message.from_user):
-                author = "user"
+                author: Literal["user"] | Participant | None = "user"
             else:
                 if message.chat.type in (ChatType.PRIVATE, ChatType.BOT):
                     try:
@@ -242,7 +257,7 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
 
         return MessageReference(
             message.id,
-            author,  # type:ignore
+            author,
             self._to_message_styling(message),
         )
 

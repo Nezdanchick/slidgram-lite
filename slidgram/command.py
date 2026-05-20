@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 from slidge import FormField
 from slidge.command import Command, CommandAccess, Form
 from slidge.command.categories import GROUPS
+from slixmpp import JID
 
 if TYPE_CHECKING:
     from .session import Session
@@ -16,7 +17,7 @@ class JoinPublicChat(Command):
     INSTRUCTIONS = "Use a tg:// URI or a or a https://t.me URL to join a group"
     CATEGORY = GROUPS
 
-    async def run(self, _session, _ifrom, *_args):
+    async def run(self, session: "Session | None", ifrom: JID, *args: str) -> Form:  # type:ignore
         return Form(
             title=self.NAME,
             instructions=self.INSTRUCTIONS,
@@ -25,7 +26,7 @@ class JoinPublicChat(Command):
         )
 
     @staticmethod
-    async def finish(form_values: dict, session: "Session", _ifrom):
+    async def finish(form_values: dict, session: "Session", _ifrom: JID) -> str:
         chat_name: str = form_values["query"]
         if chat_name.startswith("http://"):
             chat_name = "https://" + chat_name[7:]

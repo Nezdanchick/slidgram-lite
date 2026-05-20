@@ -2,6 +2,7 @@ import logging
 from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import Never
 from urllib.parse import unquote
 
 import aiohttp
@@ -23,10 +24,11 @@ from pyrogram.types import (
 from pyrogram.utils import get_channel_id
 from slidge import BaseSession
 from slidge.command import FormField, SearchResult
+from slidge.db import GatewayUser
 from slidge.util.types import Mention, RecipientType, Sticker
 from slixmpp.exceptions import XMPPError
 
-from .contact import Contact
+from .contact import Contact, Roster
 from .errors import (
     ignore_event_on_peer_id_invalid,
     log_error_on_peer_id_invalid,
@@ -43,12 +45,13 @@ Recipient = Contact | MUC
 class Session(BaseSession[int, Recipient]):
     xmpp: Gateway
     bookmarks: Bookmarks
+    contacts: Roster
 
-    def __init__(self, *a, **kw):
-        super().__init__(*a, **kw)
+    def __init__(self, user: GatewayUser) -> None:
+        super().__init__(user)
         self.__init_tg()
 
-    def __init_tg(self):
+    def __init_tg(self) -> None:
         self.tg = TelegramClient(self.user_jid.bare)
 
         # need to be in a different group than other handlers or else it's not used
@@ -65,7 +68,7 @@ class Session(BaseSession[int, Recipient]):
     def xmpp_to_legacy_msg_id(i: str) -> int:
         return int(i)
 
-    async def on_invalid_key(self) -> None:
+    async def on_invalid_key(self) -> Never:
         self.send_gateway_message(
             "Your telegram session is not valid anymore. "
             "Maybe you disconnected slidgram from another telegram client? "
@@ -75,7 +78,7 @@ class Session(BaseSession[int, Recipient]):
         raise XMPPError("not-authorized", "Your credentials are not valid anymore")
 
     @tg_to_xmpp_errors
-    async def login(self):
+    async def login(self) -> str:
         await self.tg.start()
         me = self.tg.me
         assert me is not None
@@ -85,7 +88,7 @@ class Session(BaseSession[int, Recipient]):
         return f"Connected as {my_name}"
 
     @tg_to_xmpp_errors
-    async def logout(self):
+    async def logout(self) -> None:
         await self.tg.stop()
 
     # The following three chat states have no equivalent in telegram. if we don't override this
@@ -95,16 +98,16 @@ class Session(BaseSession[int, Recipient]):
     # and "active" when the message has a body, it makes sense to not reply "feature-not-implemented",
     # especially since contacts advertise support for chat states in their disco#features.
     # This could (maybe should) be improved in slidge core, but this fix is good enough for now.
-    async def on_active(self, *_args, **_kwargs):
+    async def on_active(self, *_args, **_kwargs) -> None:  # noqa
         pass
 
-    async def on_inactive(self, *_args, **_kwargs):
+    async def on_inactive(self, *_args, **_kwargs) -> None:  # noqa
         pass
 
-    async def on_gone(self, *_args, **_kwargs):
+    async def on_gone(self, *_args, **_kwargs) -> None:  # noqa
         pass
 
-    async def on_presence(self, *_args, **_kwargs):
+    async def on_presence(self, *_args, **_kwargs) -> None:  # noqa
         pass
 
     @tg_to_xmpp_errors
@@ -115,7 +118,7 @@ class Session(BaseSession[int, Recipient]):
         *,
         reply_to_msg_id: int | None = None,
         mentions: list[Mention] | None = None,
-        **_kwargs,
+        **_kwargs,  # noqa
     ) -> int:
         text, entities = await styling_to_entities(text, mentions)
         message = await self.tg.send_message(
@@ -135,7 +138,7 @@ class Session(BaseSession[int, Recipient]):
         *,
         reply_to_msg_id: int | None = None,
         mentions: list[Mention] | None = None,
-        **_kwargs,
+        **_kwargs,  # noqa
     ) -> None:
         text, entities = await styling_to_entities(text, mentions)
         await self.tg.edit_message_text(
@@ -153,7 +156,7 @@ class Session(BaseSession[int, Recipient]):
         *,
         http_response: aiohttp.ClientResponse,
         reply_to_msg_id: int | None = None,
-        **_kwargs,
+        **_kwargs,  # noqa
     ) -> int:
         file_name = unquote(url.split("/")[-1])
         content_type = http_response.content_type
@@ -206,7 +209,7 @@ class Session(BaseSession[int, Recipient]):
         sticker: Sticker,
         *,
         reply_to_msg_id: int | None = None,
-        **_kwargs,
+        **_kwargs,  # noqa
     ) -> int:
         stickers = self.user.legacy_module_data.get("stickers", {})
         assert isinstance(stickers, dict)
@@ -261,13 +264,13 @@ class Session(BaseSession[int, Recipient]):
         return message.id
 
     @tg_to_xmpp_errors
-    async def on_react(
+    async def on_react(  # type:ignore[override]
         self,
         chat: Recipient,
         legacy_msg_id: int,
         emojis: list[str],
-        thread=None,
-    ):
+        thread: int | None = None,
+    ) -> None:
         await self.tg.send_reaction(
             chat.legacy_id,
             legacy_msg_id,
@@ -275,24 +278,28 @@ class Session(BaseSession[int, Recipient]):
         )
 
     @tg_to_xmpp_errors
-    async def on_composing(self, chat: RecipientType, thread=None):
+    async def on_composing(  # type:ignore[override]
+        self, chat: RecipientType, thread: int | None = None
+    ) -> None:
         await self.tg.send_chat_action(chat.legacy_id, ChatAction.TYPING)
 
     @tg_to_xmpp_errors
-    async def on_paused(self, chat: RecipientType, thread=None):
+    async def on_paused(self, chat: RecipientType, thread: int | None = None) -> None:  # type:ignore[override]
         await self.tg.send_chat_action(chat.legacy_id, ChatAction.CANCEL)
 
     @tg_to_xmpp_errors
-    async def on_displayed(self, chat: RecipientType, legacy_msg_id: int, thread=None):
+    async def on_displayed(  # type:ignore[override]
+        self, chat: RecipientType, legacy_msg_id: int, thread: int | None = None
+    ) -> None:
         await self.tg.read_chat_history(chat.legacy_id, legacy_msg_id)
 
     @tg_to_xmpp_errors
-    async def on_moderate(
+    async def on_moderate(  # type:ignore[override]
         self,
-        muc: MUC,  # type:ignore
+        muc: MUC,
         legacy_msg_id: int,
         reason: str | None,
-    ):
+    ) -> None:
         if (
             await self.tg.delete_messages(muc.legacy_id, [legacy_msg_id], revoke=True)
             == 0
@@ -313,16 +320,18 @@ class Session(BaseSession[int, Recipient]):
         return group.id
 
     @tg_to_xmpp_errors
-    async def on_invitation(self, contact: Contact, muc: MUC, reason: str | None):
+    async def on_invitation(  # type:ignore[override]
+        self, contact: Contact, muc: MUC, reason: str | None
+    ) -> None:
         await self.tg.add_chat_members(muc.legacy_id, contact.legacy_id)
 
     @tg_to_xmpp_errors
-    async def on_retract(
+    async def on_retract(  # type:ignore[override]
         self,
         chat: Recipient,
         legacy_msg_id: int,
-        thread=None,
-    ):
+        thread: int | None = None,
+    ) -> None:
         await self.tg.delete_messages(chat.legacy_id, [legacy_msg_id], revoke=True)
 
     async def on_avatar(
@@ -395,7 +404,7 @@ class Session(BaseSession[int, Recipient]):
         )
 
     @tg_to_xmpp_errors
-    async def on_leave_group(self, chat_id: int):
+    async def on_leave_group(self, chat_id: int) -> None:  # type:ignore[override]  # ty:ignore[unused]
         await self.tg.leave_chat(chat_id)
 
     @log_error_on_peer_id_invalid
@@ -450,7 +459,9 @@ class Session(BaseSession[int, Recipient]):
         contact.update_tg_status(user)
 
     @log_error_on_peer_id_invalid
-    async def _on_tg_chat_member(self, _tg, update: ChatMemberUpdated):
+    async def _on_tg_chat_member(
+        self, _tg: TelegramClient, update: ChatMemberUpdated
+    ) -> None:
         muc = await self.bookmarks.by_legacy_id(update.chat.id)
         part = await muc.get_participant_by_legacy_id(update.new_chat_member.user.id)
         part.update_tg_member(update.new_chat_member)
@@ -478,7 +489,9 @@ class Session(BaseSession[int, Recipient]):
         participant.react(message.id, emojis)
 
     @ignore_event_on_peer_id_invalid
-    async def _on_tg_deleted_msg(self, _tg, messages: list[Message]) -> None:
+    async def _on_tg_deleted_msg(
+        self, _tg: TelegramClient, messages: list[Message]
+    ) -> None:
         for message in messages:
             msg_id = message.id
             message = self.tg.message_cache.get_by_message_id(msg_id)
@@ -496,7 +509,11 @@ class Session(BaseSession[int, Recipient]):
     # these are "raw" telegram updates that are not processed at all by
     # pyrogram
     async def _on_tg_raw(
-        self, _tg, update: Update, users: dict[int, User], chats: dict[int, Chat]
+        self,
+        _tg: TelegramClient,
+        update: Update,
+        users: dict[int, User],
+        chats: dict[int, Chat],
     ) -> None:
         name = update.QUALNAME.split(".")[-1]
         handler = getattr(self, f"_on_tg_{name}", None)
@@ -509,7 +526,7 @@ class Session(BaseSession[int, Recipient]):
             self.log.exception("Exception raised in %s: %s", handler, e, exc_info=e)
 
     async def _on_tg_UpdateDialogPinned(
-        self, update: pyro_raw_types.UpdateDialogPinned, _users, chats
+        self, update: pyro_raw_types.UpdateDialogPinned, _users: object, chats: object
     ) -> None:
         if isinstance(update.peer, pyro_raw_types.DialogPeerFolder):
             # TODO: investigate what that is
@@ -523,14 +540,17 @@ class Session(BaseSession[int, Recipient]):
 
     @ignore_event_on_peer_id_invalid
     async def _on_tg_UpdateUserTyping(
-        self, update: pyro_raw_types.UpdateUserTyping, _users, _chats
+        self, update: pyro_raw_types.UpdateUserTyping, _users: object, _chats: object
     ) -> None:
         actor = await self.contacts.by_legacy_id(update.user_id)
         self._send_action(actor, update.action)
 
     @ignore_event_on_peer_id_invalid
     async def _on_tg_UpdateChatUserTyping(
-        self, update: pyro_raw_types.UpdateChatUserTyping, _users, _chats
+        self,
+        update: pyro_raw_types.UpdateChatUserTyping,
+        _users: object,
+        _chats: object,
     ) -> None:
         muc = await self.bookmarks.by_legacy_id(-update.chat_id)
         if isinstance(update.from_id, pyro_raw_types.PeerUser):
@@ -542,7 +562,10 @@ class Session(BaseSession[int, Recipient]):
 
     @ignore_event_on_peer_id_invalid
     async def _on_tg_UpdateChannelUserTyping(
-        self, update: pyro_raw_types.UpdateChannelUserTyping, _users, _chats
+        self,
+        update: pyro_raw_types.UpdateChannelUserTyping,
+        _users: object,
+        _chats: object,
     ) -> None:
         muc = await self.bookmarks.by_legacy_id(get_channel_id(update.channel_id))
         if isinstance(update.from_id, pyro_raw_types.PeerUser):
@@ -564,14 +587,20 @@ class Session(BaseSession[int, Recipient]):
 
     @ignore_event_on_peer_id_invalid
     async def _on_tg_UpdateReadHistoryOutbox(
-        self, update: pyro_raw_types.UpdateReadHistoryOutbox, _users, _chats
+        self,
+        update: pyro_raw_types.UpdateReadHistoryOutbox,
+        _users: object,
+        _chats: object,
     ) -> None:
         actor = await self._get_actor_by_peer(update.peer)
         actor.displayed(update.max_id)
 
     @ignore_event_on_peer_id_invalid
     async def _on_tg_UpdateReadHistoryInbox(
-        self, update: pyro_raw_types.UpdateReadHistoryInbox, _users, _chats: list[Chat]
+        self,
+        update: pyro_raw_types.UpdateReadHistoryInbox,
+        _users: object,
+        _chats: list[Chat],
     ) -> None:
         if isinstance(update.peer, pyro_raw_types.PeerUser) and self.tg.is_me(
             update.peer.user_id
@@ -583,7 +612,10 @@ class Session(BaseSession[int, Recipient]):
 
     @ignore_event_on_peer_id_invalid
     async def _on_tg_UpdateReadChannelInbox(
-        self, update: pyro_raw_types.UpdateReadChannelInbox, _users, _chats
+        self,
+        update: pyro_raw_types.UpdateReadChannelInbox,
+        _users: object,
+        _chats: object,
     ) -> None:
         muc = await self.bookmarks.by_legacy_id(get_channel_id(update.channel_id))
         part = await muc.get_user_participant()
@@ -591,7 +623,10 @@ class Session(BaseSession[int, Recipient]):
 
     @log_error_on_peer_id_invalid
     async def _on_tg_UpdatePinnedMessages(
-        self, update: pyro_raw_types.UpdatePinnedMessages, _users, _chats
+        self,
+        update: pyro_raw_types.UpdatePinnedMessages,
+        _users: object,
+        _chats: object,
     ) -> None:
         muc = await self._get_muc_by_peer(update.peer)
         if muc is None:
@@ -664,7 +699,9 @@ class Session(BaseSession[int, Recipient]):
 
         raise RuntimeError(f"Unable to determine who sent this: {update}")
 
-    async def _get_actor_by_peer(self, peer: Peer, user=False) -> Contact | Participant:
+    async def _get_actor_by_peer(
+        self, peer: Peer, user: bool = False
+    ) -> Contact | Participant:
         if isinstance(peer, pyro_raw_types.PeerUser):
             return await self.contacts.by_legacy_id(peer.user_id)
         elif isinstance(peer, pyro_raw_types.PeerChat):

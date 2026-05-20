@@ -12,6 +12,7 @@ from slidge.command.register import (
     RegistrationType,
     TwoFactorNotRequired,
 )
+from slidge.db.meta import JSONSerializable
 from slidge.util.util import is_valid_phone_number
 from slixmpp import JID
 from slixmpp.exceptions import XMPPError
@@ -68,7 +69,7 @@ class Gateway(BaseGateway):
         field for field in BaseGateway.PREFERENCES if field.var != "sync_presence"
     ]
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         if not config.API_ID:
             self.REGISTRATION_FIELDS.extend(
@@ -95,7 +96,9 @@ class Gateway(BaseGateway):
         if not reactions_db_path.exists():
             reactions.Base.metadata.create_all(reactions.engine)
 
-    async def validate(self, user_jid: JID, registration_form: dict[str, str | None]):
+    async def validate(
+        self, user_jid: JID, registration_form: dict[str, str | None]
+    ) -> JSONSerializable:
         phone = registration_form["phone"]
         assert isinstance(phone, str)
         if not is_valid_phone_number(phone):
@@ -123,13 +126,13 @@ class Gateway(BaseGateway):
 
         _clients[str(user_jid.bare)] = tg_client
 
-        return registration_form | {
+        return registration_form | {  # type:ignore[return-value]
             "sent_code_hash": sent_code.phone_code_hash,
             "api_id": registration_form.get("api_id") or config.API_ID,
             "api_hash": registration_form.get("api_hash") or config.API_HASH,
         }
 
-    async def validate_two_factor_code(self, user: GatewayUser, code: str):
+    async def validate_two_factor_code(self, user: GatewayUser, code: str) -> None:
         phone = user.legacy_module_data["phone"]
         code_hash = user.legacy_module_data["sent_code_hash"]
 
@@ -161,7 +164,7 @@ class Gateway(BaseGateway):
                 ),
             )
 
-    async def unregister(self, session: "Session"):  # type:ignore[override]
+    async def unregister(self, session: "Session") -> None:  # type:ignore[override]
         try:
             await session.tg.log_out()
         except (AuthKeyUnregistered, ConnectionError):

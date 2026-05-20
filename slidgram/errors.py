@@ -1,6 +1,14 @@
 import functools
-from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar
+import logging
+from collections.abc import AsyncIterator, Callable, Coroutine
+from typing import (
+    Any,
+    Concatenate,
+    Never,
+    ParamSpec,
+    Protocol,
+    TypeVar,
+)
 
 from pyrogram.errors import (
     AuthKeyUnregistered,
@@ -15,12 +23,20 @@ from slixmpp.types import ErrorConditions
 
 from .telegram import InvalidUserException
 
-if TYPE_CHECKING:
-    from .session import Session
-
 P = ParamSpec("P")
 R = TypeVar("R")
-WrappedMethod = Callable[P, R]
+
+
+class HasInvalidKeyMethodAndLoggerAttribute(Protocol):
+    log: logging.Logger
+
+    async def on_invalid_key(self) -> Never: ...
+
+
+T = TypeVar("T", bound=HasInvalidKeyMethodAndLoggerAttribute)
+
+WrappedMethod = Callable[Concatenate[T, P], Coroutine[Any, Any, R]]
+WrappedIterator = Callable[Concatenate[T, P], AsyncIterator[R]]
 
 
 _ERROR_MAP: dict[Any, ErrorConditions] = {
@@ -32,13 +48,12 @@ _ERROR_MAP: dict[Any, ErrorConditions] = {
 }
 
 
-def tg_to_xmpp_errors(func: WrappedMethod) -> WrappedMethod:
+def tg_to_xmpp_errors(func: WrappedMethod[T, P, R]) -> WrappedMethod[T, P, R]:
     @functools.wraps(func)
-    async def wrapped(*a, **ka):
+    async def wrapped(self: T, /, *a: P.args, **ka: P.kwargs) -> R:
         try:
-            return await func(*a, **ka)
+            return await func(self, *a, **ka)
         except AuthKeyUnregistered:
-            self: Session = a[0]
             await self.on_invalid_key()
         except (RPCError, InvalidUserException) as e:
             _raise(e, func)
@@ -46,14 +61,13 @@ def tg_to_xmpp_errors(func: WrappedMethod) -> WrappedMethod:
     return wrapped
 
 
-def tg_to_xmpp_errors_it(func: WrappedMethod) -> WrappedMethod:
+def tg_to_xmpp_errors_it(func: WrappedIterator[T, P, R]) -> WrappedIterator[T, P, R]:
     @functools.wraps(func)
-    async def wrapped(*a, **ka):
+    async def wrapped(self: T, /, *a: P.args, **ka: P.kwargs) -> AsyncIterator[R]:
         try:
-            async for x in func(*a, **ka):
+            async for x in func(self, *a, **ka):
                 yield x
         except AuthKeyUnregistered:
-            self: Session = a[0]
             await self.on_invalid_key()
         except (RPCError, InvalidUserException) as e:
             _raise(e, func)
@@ -61,7 +75,9 @@ def tg_to_xmpp_errors_it(func: WrappedMethod) -> WrappedMethod:
     return wrapped
 
 
-def log_error_on_peer_id_invalid(func: WrappedMethod) -> WrappedMethod:
+def log_error_on_peer_id_invalid(
+    func: WrappedMethod[T, P, R],
+) -> WrappedMethod[T, P, R | None]:
     """
     Decorator to log an error when a telegram event is ignored because of a
     PeerIdInvalid error. Unfortunately, because of slidge's design, if a telegram
@@ -77,18 +93,21 @@ def log_error_on_peer_id_invalid(func: WrappedMethod) -> WrappedMethod:
     """
 
     @functools.wraps(func)
-    async def wrapped(self, *a, **ka):
+    async def wrapped(self: T, *a: P.args, **ka: P.kwargs) -> R | None:  # type:ignore
         try:
             return await func(self, *a, **ka)
         except XMPPError as e:
             self.log.error(
                 "%r in %s called with %s and %s", e.text, func.__name__, a, ka
             )
+        return None
 
     return wrapped
 
 
-def ignore_event_on_peer_id_invalid(func: WrappedMethod) -> WrappedMethod:
+def ignore_event_on_peer_id_invalid(
+    func: WrappedMethod[T, P, R],
+) -> WrappedMethod[T, P, R | None]:
     """
     Decorator to silently drop telegram events related to PeerIdInvalid errors.
     This seems to be related to deleted telegram accounts. In some situations, we do not
@@ -97,21 +116,20 @@ def ignore_event_on_peer_id_invalid(func: WrappedMethod) -> WrappedMethod:
     """
 
     @functools.wraps(func)
-    async def wrapped(self, *a, **ka):
+    async def wrapped(self: T, /, *a: P.args, **ka: P.kwargs) -> R | None:
         try:
             return await func(self, *a, **ka)
         except XMPPError as e:
-            if e.condition == "item-not-found":
-                return
-            else:
+            if e.condition != "item-not-found":
                 self.log.error(
                     "%r in %s called with %s and %s", e.text, func.__name__, a, ka
                 )
+            return None
 
     return wrapped
 
 
-def _raise(e: RPCError | InvalidUserException, func: WrappedMethod):
+def _raise(e: RPCError | InvalidUserException, func: Callable) -> Never:
     condition = _ERROR_MAP.get(type(e), "internal-server-error")
     raise XMPPError(
         condition, getattr(e, "MESSAGE", str(e.args)) + f" in '{func.__name__}'"

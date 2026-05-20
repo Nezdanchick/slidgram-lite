@@ -24,7 +24,7 @@ def entities_to_xep_0393(
     entities: list[MessageEntity],
     user_id: int | None = None,
     user_nick: str | None = None,
-):
+) -> str:
     if not entities:
         return text
 
@@ -64,7 +64,7 @@ def entities_to_xep_0393_utf_16(
     entities: list[MessageEntity],
     user_id: int | None = None,
     user_nick: str | None = None,
-):
+) -> bytes:
     result = b""
     index = 0
     while entities:
@@ -108,7 +108,7 @@ def to_xep_0393(
     entity: MessageEntity | None = None,
     user_id: int | None = None,
     user_nick: str | None = None,
-):
+) -> bytes:
     if not entity:
         return t
 
@@ -136,7 +136,7 @@ def to_xep_0393(
     return t
 
 
-def merge_consecutive_entities(entities: list[MessageEntity]):
+def merge_consecutive_entities(entities: list[MessageEntity]) -> list[MessageEntity]:
     result = []
     i = 0
     while i < len(entities):

@@ -30,7 +30,7 @@ from .reactions import ReactionsStore
 
 P = ParamSpec("P")
 R = TypeVar("R")
-WrappedMethod = Callable[P, R]
+WrappedMethod = Callable[P, Awaitable[R]]
 
 AVATAR_DOWNLOAD_SLEEP = 15  # seconds between avatar downloads
 MAX_FLOOD_ATTEMPTS = 10
@@ -89,7 +89,7 @@ class Client(TelegramClient):
         return self.me.id == user_id
 
     @property
-    def download_path(self):
+    def download_path(self) -> str:
         # the trailing slash is needed by pyrogram
         return str(global_config.HOME_DIR.absolute() / "telegram_downloads") + "/"
 
@@ -118,17 +118,19 @@ class Client(TelegramClient):
             }
         return self._available_reactions
 
-    def on_reaction(self, callback):
+    def on_reaction(
+        self, callback: Callable[[Message, int, str | None], Awaitable[None]]
+    ) -> None:
         self._reaction_handler = callback
 
-    async def _on_edited_message(self, _tg: TelegramClient, message: Message):
+    async def _on_edited_message(self, _tg: TelegramClient, message: Message) -> None:
         if (
             message.raw.reactions is not None
             and message.raw.reactions.recent_reactions is not None
         ):
             await self._on_reaction(message)
 
-    async def _on_reaction(self, message: Message):
+    async def _on_reaction(self, message: Message) -> None:
         if self._reaction_handler is None:
             return
 
@@ -164,8 +166,12 @@ class Client(TelegramClient):
             await self._reaction_handler(message, reacter_id, emoji)
 
     async def _on_raw(
-        self, _tg, update: Update, _users: dict[int, User], _chats: dict[int, Chat]
-    ):
+        self,
+        _tg: "Client",
+        update: Update,
+        _users: dict[int, User],
+        _chats: dict[int, Chat],
+    ) -> None:
         async with self._get_user_lock:
             self.__update_user_cache(update)
 
@@ -196,12 +202,12 @@ class Client(TelegramClient):
         assert isinstance(user, User)
         return user
 
-    async def invoke(self, *a, **k):
+    async def invoke(self, *a, **k):  # noqa
         r = await super().invoke(*a, **k)
         self.__update_user_cache(r)
         return r
 
-    def __update_user_cache(self, raw_obj):
+    def __update_user_cache(self, raw_obj) -> None:  # noqa
         raw_users: list[RawUser] = getattr(raw_obj, "users", [])
         for raw_user in raw_users:
             if isinstance(raw_user, UserEmpty):
@@ -229,20 +235,20 @@ class Client(TelegramClient):
 
 
 class LimitedSizeDict(OrderedDict):
-    def __init__(self, size: int, *args, **kwargs):
+    def __init__(self, size: int, *args, **kwargs) -> None:  # noqa
         self._size = size
         super().__init__(*args, **kwargs)
         self._check_size_limit()
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key, value) -> None:  # noqa
         super().__setitem__(key, value)
         self._check_size_limit()
 
-    def update(self, *args, **kwargs):
+    def update(self, *args, **kwargs) -> None:  # noqa
         super().update(*args, **kwargs)
         self._check_size_limit()
 
-    def _check_size_limit(self):
+    def _check_size_limit(self) -> None:
         while len(self) > self._size:
             self.popitem(last=False)
 
@@ -252,7 +258,7 @@ class MessageCache(Cache):
     # comes with message IDs only, and we need to know which chat they actually
     # belong too
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:  # noqa
         super().__init__(*args, **kwargs)
         self._chat_by_message_ids = LimitedSizeDict(10_000)
 
@@ -277,9 +283,9 @@ class MessageCache(Cache):
 invalid_user = InvalidUser()
 
 
-def handle_flood(func: WrappedMethod) -> WrappedMethod:
+def handle_flood(func: WrappedMethod[P, R]) -> WrappedMethod[P, R]:
     @functools.wraps(func)
-    async def wrapped(*a, **kw):
+    async def wrapped(*a: P.args, **kw: P.kwargs) -> R:
         start = datetime.now()
         for i in range(MAX_FLOOD_ATTEMPTS):
             try:
@@ -287,13 +293,13 @@ def handle_flood(func: WrappedMethod) -> WrappedMethod:
             except FloodWait as e:
                 log.warning(
                     "Flood in %s(%s %s) (%s), sleep for %s seconds",
-                    func.__name__,
+                    func.__name__,  # type:ignore
                     a,
                     kw,
                     start,
                     e.value,
                 )
-                await asyncio.sleep(e.value + i)
+                await asyncio.sleep(e.value + i)  # type:ignore
         raise XMPPError("internal-server-error", "Telegram flood")
 
     return wrapped

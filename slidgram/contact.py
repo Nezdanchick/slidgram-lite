@@ -1,6 +1,7 @@
 import logging
+from collections.abc import AsyncIterator
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Never
 
 from pyrogram.enums import UserStatus
 from pyrogram.types import Message, User
@@ -20,6 +21,9 @@ if TYPE_CHECKING:
 class Roster(LegacyRoster[int, "Contact"]):
     session: "Session"
 
+    async def on_invalid_key(self) -> Never:
+        await self.session.on_invalid_key()
+
     async def jid_username_to_legacy_id(self, jid_username: str) -> int:
         try:
             return int(jid_username)
@@ -27,7 +31,7 @@ class Roster(LegacyRoster[int, "Contact"]):
             raise XMPPError("bad-request", f"Not an integer: {jid_username}")
 
     @tg_to_xmpp_errors_it
-    async def fill(self):
+    async def fill(self) -> AsyncIterator["Contact"]:
         assert self.session.tg.me is not None
         for user in await self.session.tg.get_contacts():
             if user.id == self.session.tg.me.id:
@@ -35,7 +39,7 @@ class Roster(LegacyRoster[int, "Contact"]):
             yield await self.by_legacy_id(user.id)
 
 
-class Contact(
+class Contact(  # type:ignore[misc]
     ReactionsMixin, TelegramMessageSenderMixin, SetAvatarMixin, LegacyContact[int]
 ):
     xmpp: "Gateway"
@@ -45,8 +49,11 @@ class Contact(
     async def get_tg_user(self) -> User:
         return await self.session.tg.get_user(self.legacy_id)
 
+    async def on_invalid_key(self) -> Never:
+        await self.session.on_invalid_key()
+
     @tg_to_xmpp_errors
-    async def update_info(self):
+    async def update_info(self) -> None:
         user = await self.get_tg_user()
 
         self.name = user.full_name
@@ -71,7 +78,7 @@ class Contact(
         if user.is_contact:
             self.session.create_task(self.add_to_roster())
 
-    def update_tg_status(self, user: User):
+    def update_tg_status(self, user: User) -> None:
         if user.status is None:
             self.offline()
             return
@@ -90,7 +97,11 @@ class Contact(
             self.offline()
 
     async def send_tg_msg(
-        self, message: Message, carbon=False, correction=False, archive_only=False
+        self,
+        message: Message,
+        carbon: bool = False,
+        correction: bool = False,
+        archive_only: bool = False,
     ) -> None:
         await super().send_tg_msg(message, carbon=carbon, correction=correction)
 
