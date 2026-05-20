@@ -1,7 +1,6 @@
 from typing import TYPE_CHECKING
 
-from slidge import FormField
-from slidge.command import Command, CommandAccess, Form
+from slidge.command import Command, CommandAccess, Form, FormField
 from slidge.command.categories import GROUPS
 from slixmpp import JID
 
@@ -26,7 +25,9 @@ class JoinPublicChat(Command):
         )
 
     @staticmethod
-    async def finish(form_values: dict, session: "Session", _ifrom: JID) -> str:
+    async def finish(
+        form_values: dict[str, str], session: "Session", _ifrom: JID
+    ) -> str:
         chat_name: str = form_values["query"]
         if chat_name.startswith("http://"):
             chat_name = "https://" + chat_name[7:]

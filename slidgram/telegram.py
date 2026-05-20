@@ -11,7 +11,10 @@ from pyrogram import Client as TelegramClient
 from pyrogram.client import Cache
 from pyrogram.errors import FloodWait, PeerIdInvalid
 from pyrogram.file_id import FileId
-from pyrogram.raw.functions.messages import EditChatAdmin, GetAvailableReactions
+from pyrogram.raw.functions.messages.edit_chat_admin import EditChatAdmin
+from pyrogram.raw.functions.messages.get_available_reactions import (
+    GetAvailableReactions,
+)
 from pyrogram.raw.types import (
     InputPeerChat,
     InputPeerUser,
@@ -63,7 +66,7 @@ class Client(TelegramClient):
         self._users_to_get = list[int]()
 
         self.on_raw_update(group=0)(self._on_raw)  # type:ignore
-        self.on_edited_message(group=1)(self._on_edited_message)  # type: ignore
+        self.on_edited_message(group=1)(self._on_edited_message)
 
         self._reactions = ReactionsStore(name)
         # We cache raw users because they seem to have a measurably
@@ -108,7 +111,7 @@ class Client(TelegramClient):
 
     async def get_available_reactions(self) -> AvailableReactions:
         rpc = GetAvailableReactions(hash=0)
-        return await self.invoke(rpc)
+        return await self.invoke(rpc)  # type:ignore[no-any-return, no-untyped-call]
 
     async def available_reactions(self) -> set[str]:
         if self._available_reactions is None:
@@ -189,7 +192,7 @@ class Client(TelegramClient):
             if cached_raw is not None:
                 self.log.debug("user was cached! YAY!")
                 # noinspection PyProtectedMember
-                cached_user = User._parse(self, cached_raw)  # type:ignore
+                cached_user = User._parse(self, cached_raw)
                 assert cached_user is not None
                 return cached_user
         self.log.debug("user %s was not cached! damn!", user_id)
@@ -202,12 +205,12 @@ class Client(TelegramClient):
         assert isinstance(user, User)
         return user
 
-    async def invoke(self, *a, **k):  # noqa
+    async def invoke(self, *a, **k):  # noqa  # type:ignore[no-untyped-def]
         r = await super().invoke(*a, **k)
         self.__update_user_cache(r)
         return r
 
-    def __update_user_cache(self, raw_obj) -> None:  # noqa
+    def __update_user_cache(self, raw_obj) -> None:  # noqa  # type:ignore[no-untyped-def]
         raw_users: list[RawUser] = getattr(raw_obj, "users", [])
         for raw_user in raw_users:
             if isinstance(raw_user, UserEmpty):
@@ -225,7 +228,7 @@ class Client(TelegramClient):
         if not isinstance(user, InputPeerUser):
             self.log.warning("Tried to make admin but wrong peer type: %s", type(user))
             return False
-        return await self.invoke(
+        return await self.invoke(  # type:ignore[no-any-return]
             EditChatAdmin(
                 chat_id=chat.chat_id,
                 user_id=user,  # type:ignore
@@ -234,7 +237,7 @@ class Client(TelegramClient):
         )
 
 
-class LimitedSizeDict(OrderedDict):
+class LimitedSizeDict(OrderedDict):  # type:ignore[type-arg]
     def __init__(self, size: int, *args, **kwargs) -> None:  # noqa
         self._size = size
         super().__init__(*args, **kwargs)
@@ -264,7 +267,7 @@ class MessageCache(Cache):
 
     def __setitem__(self, key: tuple[int, int], value: Message) -> None:
         # tuple = [chat_id, message_id]
-        super().__setitem__(key, value)
+        super().__setitem__(key, value)  # type:ignore[no-untyped-call]
         self._chat_by_message_ids[value.id] = value
 
     def get_by_message_id(self, message_id: int) -> Message:
@@ -293,13 +296,13 @@ def handle_flood(func: WrappedMethod[P, R]) -> WrappedMethod[P, R]:
             except FloodWait as e:
                 log.warning(
                     "Flood in %s(%s %s) (%s), sleep for %s seconds",
-                    func.__name__,  # type:ignore
+                    func.__name__,
                     a,
                     kw,
                     start,
                     e.value,
                 )
-                await asyncio.sleep(e.value + i)  # type:ignore
+                await asyncio.sleep(e.value + i)
         raise XMPPError("internal-server-error", "Telegram flood")
 
     return wrapped

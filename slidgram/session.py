@@ -10,8 +10,12 @@ import pyrogram.raw.types as pyro_raw_types
 from PIL import Image
 from pyrogram.enums import ChatAction, ChatType, MessageServiceType
 from pyrogram.errors import FileReferenceExpired
-from pyrogram.raw.base import Peer, SendMessageAction, Update
-from pyrogram.raw.base.contacts import ImportedContacts
+from pyrogram.raw.base import (  # type:ignore[attr-defined]
+    Peer,
+    SendMessageAction,
+    Update,
+)
+from pyrogram.raw.base.contacts import ImportedContacts  # type:ignore[attr-defined]
 from pyrogram.types import (
     Chat,
     ChatMemberUpdated,
@@ -55,12 +59,12 @@ class Session(BaseSession[int, Recipient]):
         self.tg = TelegramClient(self.user_jid.bare)
 
         # need to be in a different group than other handlers or else it's not used
-        self.tg.on_raw_update(group=10)(self._on_tg_raw)  # type:ignore
-        self.tg.on_message(group=20)(self._on_tg_msg)  # type:ignore
-        self.tg.on_user_status(group=20)(self._on_tg_status)  # type:ignore
-        self.tg.on_edited_message(group=20)(self._on_tg_edit)  # type:ignore
-        self.tg.on_chat_member_updated(group=20)(self._on_tg_chat_member)  # type:ignore
-        self.tg.on_deleted_messages(group=20)(self._on_tg_deleted_msg)  # type:ignore
+        self.tg.on_raw_update(group=10)(self._on_tg_raw)  # type:ignore[misc]
+        self.tg.on_message(group=20)(self._on_tg_msg)
+        self.tg.on_user_status(group=20)(self._on_tg_status)
+        self.tg.on_edited_message(group=20)(self._on_tg_edit)
+        self.tg.on_chat_member_updated(group=20)(self._on_tg_chat_member)
+        self.tg.on_deleted_messages(group=20)(self._on_tg_deleted_msg)
         # on_reaction is not a standard pyrogram hook, hence the different syntax
         self.tg.on_reaction(self._on_tg_reaction)
 
@@ -98,21 +102,22 @@ class Session(BaseSession[int, Recipient]):
     # and "active" when the message has a body, it makes sense to not reply "feature-not-implemented",
     # especially since contacts advertise support for chat states in their disco#features.
     # This could (maybe should) be improved in slidge core, but this fix is good enough for now.
-    async def on_active(self, *_args, **_kwargs) -> None:  # noqa
+    async def on_active(self, *_args, **_kwargs) -> None:  # type:ignore[no-untyped-def]  # noqa
         pass
 
-    async def on_inactive(self, *_args, **_kwargs) -> None:  # noqa
+    async def on_inactive(self, *_args, **_kwargs) -> None:  # type:ignore[no-untyped-def]  # noqa
         pass
 
-    async def on_gone(self, *_args, **_kwargs) -> None:  # noqa
+    async def on_gone(self, *_args, **_kwargs) -> None:  # type:ignore[no-untyped-def]  # noqa
         pass
 
-    async def on_presence(self, *_args, **_kwargs) -> None:  # noqa
+    async def on_presence(self, *_args, **_kwargs) -> None:  # type:ignore[no-untyped-def]  # noqa
         pass
 
     @tg_to_xmpp_errors
-    async def on_text(
+    async def on_text(  # type:ignore[no-untyped-def]
         self,
+        /,
         chat: Recipient,
         text: str,
         *,
@@ -130,8 +135,9 @@ class Session(BaseSession[int, Recipient]):
         return message.id
 
     @tg_to_xmpp_errors
-    async def on_correct(
+    async def on_correct(  # type:ignore[no-untyped-def]
         self,
+        /,
         chat: Recipient,
         text: str,
         legacy_msg_id: int,
@@ -149,8 +155,9 @@ class Session(BaseSession[int, Recipient]):
         )
 
     @tg_to_xmpp_errors
-    async def on_file(
+    async def on_file(  # type:ignore[no-untyped-def]
         self,
+        /,
         chat: RecipientType,
         url: str,
         *,
@@ -203,8 +210,9 @@ class Session(BaseSession[int, Recipient]):
         return message.id
 
     @tg_to_xmpp_errors
-    async def on_sticker(
+    async def on_sticker(  # type:ignore[no-untyped-def]
         self,
+        /,
         chat: Recipient,
         sticker: Sticker,
         *,
@@ -314,7 +322,7 @@ class Session(BaseSession[int, Recipient]):
     async def on_create_group(  # type:ignore
         self,
         name: str,
-        contacts: list[Contact],  # type:ignore
+        contacts: list[Contact],
     ) -> int:
         group = await self.tg.create_group(name, [c.legacy_id for c in contacts])
         return group.id
@@ -703,7 +711,7 @@ class Session(BaseSession[int, Recipient]):
         self, peer: Peer, user: bool = False
     ) -> Contact | Participant:
         if isinstance(peer, pyro_raw_types.PeerUser):
-            return await self.contacts.by_legacy_id(peer.user_id)
+            return await self.contacts.by_legacy_id(peer.user_id)  # type:ignore[no-any-return]
         elif isinstance(peer, pyro_raw_types.PeerChat):
             muc = await self.bookmarks.by_legacy_id(-peer.chat_id)
         elif isinstance(peer, PeerChannel):

@@ -17,6 +17,7 @@ from pyrogram.types import (
 )
 from pyrogram.utils import zero_datetime
 from slidge import global_config
+from slidge.db.meta import JSONSerializable
 from slidge.group import LegacyBookmarks, LegacyMUC, LegacyParticipant, MucType
 from slidge.util.types import Hat, HoleBound, MucAffiliation
 from slixmpp.exceptions import XMPPError
@@ -88,7 +89,7 @@ class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int
     session: "Session"
     legacy_id: int
 
-    def __init__(self, *a, **kw) -> None:  # noqa
+    def __init__(self, *a, **kw) -> None:  # type:ignore[no-untyped-def]  # noqa
         super().__init__(*a, **kw)
         self.pinned_message_ids = list[int]()
         # key = topic.id; value = last broadcast UNIX timestamp
@@ -428,16 +429,17 @@ class MUC(ReactionsMixin, SetAvatarMixin, LegacyMUC[int, int, "Participant", int
         assert isinstance(message, Message)
         self.set_tg_pinned_message(message)
 
-    def serialize_extra_attributes(self) -> dict:
+    def serialize_extra_attributes(self) -> JSONSerializable:
         return {
-            "pinned_messages": self.pinned_message_ids,
-            "threads_title_broadcasted": self.threads_title_broadcasted,
+            "pinned_messages": self.pinned_message_ids,  # type:ignore[dict-item]
+            "threads_title_broadcasted": self.threads_title_broadcasted,  # type:ignore[dict-item]
         }
 
-    def deserialize_extra_attributes(self, data: dict) -> None:
-        self.pinned_message_ids = data.get("pinned_messages", [])
+    def deserialize_extra_attributes(self, data: JSONSerializable) -> None:
+        self.pinned_message_ids = (data.get("pinned_messages", []),)  # type:ignore[assignment]
         self.threads_title_broadcasted = {
-            int(k): v for k, v in data.get("threads_title_broadcasted", {}).items()
+            int(k): v  # type:ignore[misc]
+            for k, v in data.get("threads_title_broadcasted", {}).items()  # type:ignore[union-attr]
         }
 
     async def send_thread_subject(self, topic: ForumTopic) -> None:

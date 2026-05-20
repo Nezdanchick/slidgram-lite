@@ -6,13 +6,13 @@ from pyrogram import Client
 from pyrogram.errors import AuthKeyUnregistered, SessionPasswordNeeded
 from pyrogram.types import User as TGUser
 from slidge import BaseGateway, global_config
+from slidge.command import FormField
 from slidge.command.register import (
-    FormField,
-    GatewayUser,
     RegistrationType,
     TwoFactorNotRequired,
 )
 from slidge.db.meta import JSONSerializable
+from slidge.db.models import GatewayUser
 from slidge.util.util import is_valid_phone_number
 from slixmpp import JID
 from slixmpp.exceptions import XMPPError
@@ -169,7 +169,7 @@ class Gateway(BaseGateway):
             await session.tg.log_out()
         except (AuthKeyUnregistered, ConnectionError):
             # can happen when the session is killed from another tg client
-            await session.tg.storage.delete()
+            await session.tg.storage.delete()  # type:ignore[no-untyped-call]
 
 
 _clients: dict[str, Client] = {}

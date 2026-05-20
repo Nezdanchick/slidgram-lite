@@ -54,7 +54,7 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
     log: logging.Logger
     muc: "MUC"
 
-    def __init__(self, *a, **kw) -> None:  # noqa
+    def __init__(self, *a, **kw) -> None:  # type:ignore[no-untyped-def]  # noqa
         super().__init__(*a, **kw)
         self.send_file = handle_flood(self.send_file)  # type:ignore
 
@@ -217,7 +217,9 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
             archive_only=archive_only,
         )
 
-    async def _get_reply_to(self, message: Message | None) -> MessageReference | None:
+    async def _get_reply_to(
+        self, message: Message | None
+    ) -> MessageReference[int] | None:
         if message is None:
             return None
 
@@ -308,7 +310,7 @@ def _get_media(message: Message) -> TgMediaTypes | None:
     for name in _MEDIAS:
         media = getattr(message, name, None)
         if media is not None:
-            return media
+            return media  # type:ignore[no-any-return]
     return None
 
 

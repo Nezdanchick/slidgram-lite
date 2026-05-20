@@ -93,7 +93,7 @@ def log_error_on_peer_id_invalid(
     """
 
     @functools.wraps(func)
-    async def wrapped(self: T, *a: P.args, **ka: P.kwargs) -> R | None:  # type:ignore
+    async def wrapped(self: T, /, *a: P.args, **ka: P.kwargs) -> R | None:
         try:
             return await func(self, *a, **ka)
         except XMPPError as e:
@@ -129,7 +129,7 @@ def ignore_event_on_peer_id_invalid(
     return wrapped
 
 
-def _raise(e: RPCError | InvalidUserException, func: Callable) -> Never:
+def _raise(e: RPCError | InvalidUserException, func: Callable[[Any], Any]) -> Never:
     condition = _ERROR_MAP.get(type(e), "internal-server-error")
     raise XMPPError(
         condition, getattr(e, "MESSAGE", str(e.args)) + f" in '{func.__name__}'"

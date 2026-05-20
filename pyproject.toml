@@ -71,14 +71,20 @@ files = ["slidgram"]
 exclude = [
     "tests",
 ]
-check_untyped_defs = true
-strict = false
+strict = true
 
 [[tool.mypy.overrides]]
-module = [
-    "slidge_style_parser.*",
-]
+module = "slidgram.telegram"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
+[[tool.mypy.overrides]]
+module = "slidge_style_parser.*"
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "pyrogram.raw.types.*"
+implicit_reexport = true
 
 [tool.ruff]
 line-length = 88

@@ -7,7 +7,7 @@ import logging
 from pyrogram.enums import MessageEntityType
 from pyrogram.types import MessageEntity
 from slidge.util.types import Mention
-from slidge_style_parser import format_for_telegram  # type:ignore
+from slidge_style_parser import format_for_telegram
 
 _STYLING_SURROUNDS = {
     MessageEntityType.ITALIC: "_".encode("utf-16-le"),
