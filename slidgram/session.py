@@ -430,6 +430,13 @@ class Session(BaseSession[int, Recipient]):
             return
 
         sender, carbon = await self.get_sender(message)
+
+        if carbon and message.edit_hide:
+            # When a 1:1 contact reacts to one of our messages, this is
+            # triggered with the edit_hide bit on. We don't want to interpret
+            # this as *us* modifying the message from a Telegram app.
+            return
+
         await sender.send_tg_msg(message, carbon=carbon, correction=True)
 
     @ignore_event_on_peer_id_invalid
