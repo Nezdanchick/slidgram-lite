@@ -114,6 +114,23 @@ class RecipientMixin:
 
     @tg_to_xmpp_errors
     async def on_sticker(self, sticker: Sticker) -> str:
+        if sticker.content_type and sticker.content_type != "application/octet-stream":
+            # telegram stickers must be webp
+            if sticker.content_type.endswith("mp4"):
+                # video stickers in mp4 format are called "animation" in the
+                # telegram API
+                msg = await self.tg.send_animation(self.tg_id, str(sticker.path))
+            elif sticker.content_type.startswith("video"):
+                # video stickers in other formats are not a thing, so just send
+                # as video
+                msg = await self.tg.send_video(self.tg_id, str(sticker.path))
+            elif not sticker.content_type.startswith("image"):
+                # fallback to just sending the file as a document
+                msg = await self.tg.send_document(self.tg_id, str(sticker.path))
+            assert msg is not None
+            return str(msg.id)
+        # at this point we assume we have an image, which we might convert to
+        # webp if needed
         reply_to_msg_id = None if sticker.reply is None else int(sticker.reply.msg_id)
         stickers = self.session.user.legacy_module_data.get("stickers", {})
         assert isinstance(stickers, dict)
