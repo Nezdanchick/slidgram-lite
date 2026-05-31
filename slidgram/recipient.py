@@ -1,8 +1,7 @@
 import logging
+import tempfile
 from io import BytesIO
-from pathlib import Path
-from tempfile import TemporaryDirectory
-from typing import Never
+from typing import BinaryIO, Never, cast
 from urllib.parse import unquote
 
 from PIL import Image
@@ -68,19 +67,16 @@ class RecipientMixin:
         att = list(msg_att.attachments)[0]
         file_name = unquote(att.url.split("/")[-1])
         content_type = att.content_type
-        # we cannot use TemporaryFile() because pyrofork checks whether fp is
-        # an io.IOBase instance, which it is not, despite implementing seek(),
-        # tell(), and read()
-        with (
-            TemporaryDirectory() as tmp_dir,
-            (Path(tmp_dir) / file_name).open("ab+") as fp,
-        ):
+        with NamedSpooledTemporaryFile(max_size=10 * 1024 * 1024) as fp:
             async with att.get() as http_response:
                 async for chunk in http_response.content:
                     fp.write(chunk)
                 content_type = content_type or http_response.content_type
+
+            fp.seek(0)
+            fp.pseudo_name = file_name
             media, format = content_type.split("/")
-            args = self.tg_id, fp
+            args = self.tg_id, cast(BinaryIO, fp)
             if media == "audio":
                 message = await self.tg.send_audio(
                     *args,
@@ -190,3 +186,12 @@ class RecipientMixin:
     @tg_to_xmpp_errors
     async def on_retract(self, legacy_msg_id: str, thread: str | None = None) -> None:
         await self.tg.delete_messages(self.tg_id, [int(legacy_msg_id)], revoke=True)
+
+
+class NamedSpooledTemporaryFile(tempfile.SpooledTemporaryFile[bytes]):
+    # we need to guarantee the .name attribute for pyrogram to be happy
+    pseudo_name = "file"
+
+    @property
+    def name(self) -> str:
+        return super().name or self.pseudo_name
