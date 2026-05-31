@@ -1,6 +1,7 @@
 import logging
 import tempfile
 from io import BytesIO
+from mimetypes import guess_extension, guess_type
 from typing import BinaryIO, Never, cast
 from urllib.parse import unquote
 
@@ -74,9 +75,14 @@ class RecipientMixin:
                 content_type = content_type or http_response.content_type
 
             fp.seek(0)
-            fp.pseudo_name = file_name
             media, format = content_type.split("/")
             args = self.tg_id, cast(BinaryIO, fp)
+            guessed_type, _encoding = guess_type(file_name)
+            if guessed_type != content_type:
+                guessed_ext = guess_extension(content_type)
+                if guessed_ext is not None:
+                    file_name += guessed_ext
+            fp.pseudo_name = file_name
             if media == "audio":
                 message = await self.tg.send_audio(
                     *args,
