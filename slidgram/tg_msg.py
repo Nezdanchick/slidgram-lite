@@ -173,6 +173,7 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
                 disposition="inline"
                 if isinstance(media, (Sticker, Animation, Thumbnail))
                 else None,
+                is_sticker=message.sticker is not None,
             ),
             str(message.id),
             reply_to=await self._get_reply_to(message.reply_to_message),
