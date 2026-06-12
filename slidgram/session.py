@@ -216,7 +216,7 @@ class Session(BaseSession["Contact"]):
     async def _on_tg_status(self, _tg: TelegramClient, user: User) -> None:
         if self.tg.is_me(user):
             return
-        contact = await self.contacts.by_legacy_id(user.id)
+        contact = await self.contacts.by_legacy_id(str(user.id))
         contact.update_tg_status(user)
 
     @log_error_on_peer_id_invalid
@@ -303,7 +303,7 @@ class Session(BaseSession["Contact"]):
     async def _on_tg_UpdateUserTyping(
         self, update: pyro_raw_types.UpdateUserTyping, _users: object, _chats: object
     ) -> None:
-        actor = await self.contacts.by_legacy_id(update.user_id)
+        actor = await self.contacts.by_legacy_id(str(update.user_id))
         self._send_action(actor, update.action)
 
     @ignore_event_on_peer_id_invalid
@@ -441,9 +441,9 @@ class Session(BaseSession["Contact"]):
     ) -> tuple["Contact | Participant", bool]:
         if update.chat.type in (ChatType.PRIVATE, ChatType.BOT):
             if self.tg.is_me(update.from_user):
-                return await self.contacts.by_legacy_id(update.chat.id), True
+                return await self.contacts.by_legacy_id(str(update.chat.id)), True
             else:
-                return await self.contacts.by_legacy_id(update.from_user.id), False
+                return await self.contacts.by_legacy_id(str(update.from_user.id)), False
 
         muc = await self.bookmarks.by_tg_id(update.chat.id)
         if update.from_user is not None:

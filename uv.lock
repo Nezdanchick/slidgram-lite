@@ -1740,7 +1740,7 @@ wheels = [
 
 [[package]]
 name = "slidge"
-version = "0.4.0a1.dev28+g9ff1dc4e1"
+version = "0.4.0a1.dev34+g53a0a808a"
 source = { registry = "https://codeberg.org/api/packages/slidge/pypi/simple" }
 dependencies = [
     { name = "aiohttp", extra = ["speedups"] },
@@ -1754,9 +1754,9 @@ dependencies = [
     { name = "sqlalchemy" },
     { name = "thumbhash" },
 ]
-sdist = { url = "https://codeberg.org/api/packages/slidge/pypi/files/slidge/0.4.0a1.dev28+g9ff1dc4e1/slidge-0.4.0a1.dev28+g9ff1dc4e1.tar.gz", hash = "sha256:2fc2969bf117403f40d0a11ec27af9b7b873788111712e9b7c86dac73b90a4dc" }
+sdist = { url = "https://codeberg.org/api/packages/slidge/pypi/files/slidge/0.4.0a1.dev34+g53a0a808a/slidge-0.4.0a1.dev34+g53a0a808a.tar.gz", hash = "sha256:0cc074bc00a96ffd5e088f52f058fb3a0be0244edbfb011d6fd254266bd50436" }
 wheels = [
-    { url = "https://codeberg.org/api/packages/slidge/pypi/files/slidge/0.4.0a1.dev28+g9ff1dc4e1/slidge-0.4.0a1.dev28+g9ff1dc4e1-py3-none-any.whl", hash = "sha256:aefafc4529a640be116aa0e019b2cd2adc8f800b030dbc69b2560e2d08cfaed7" },
+    { url = "https://codeberg.org/api/packages/slidge/pypi/files/slidge/0.4.0a1.dev34+g53a0a808a/slidge-0.4.0a1.dev34+g53a0a808a-py3-none-any.whl", hash = "sha256:492773fb1ab476a5010e7e6f213ad0b7a7a99ccde57cc17fde3235c32452e802" },
 ]
 
 [package.optional-dependencies]

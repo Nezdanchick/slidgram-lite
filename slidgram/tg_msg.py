@@ -226,7 +226,9 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
             else:
                 if message.chat.type in (ChatType.PRIVATE, ChatType.BOT):
                     try:
-                        author = await self.contacts.by_legacy_id(message.from_user.id)
+                        author = await self.contacts.by_legacy_id(
+                            str(message.from_user.id)
+                        )
                     except XMPPError as e:
                         # deleted/banned user?
                         if e.condition == "item-not-found":

@@ -40,7 +40,7 @@ class Roster(LegacyRoster["Contact"]):
         for user in await self.session.tg.get_contacts():
             if user.id == self.session.tg.me.id:
                 continue
-            yield await self.by_legacy_id(user.id)
+            yield await self.by_legacy_id(str(user.id))
 
 
 class Contact(
