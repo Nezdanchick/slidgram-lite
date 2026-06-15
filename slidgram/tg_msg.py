@@ -226,9 +226,7 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
             else:
                 if message.chat.type in (ChatType.PRIVATE, ChatType.BOT):
                     try:
-                        author = await self.contacts.by_legacy_id(
-                            str(message.from_user.id)
-                        )
+                        author = await self.contacts.by_tg_id(message.from_user.id)
                     except XMPPError as e:
                         # deleted/banned user?
                         if e.condition == "item-not-found":
@@ -250,7 +248,7 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
         elif message.sender_chat is not None or (
             message.chat is not None and message.chat.type == ChatType.CHANNEL
         ):
-            muc = await self.bookmarks.by_legacy_id(message.chat.id)
+            muc = await self.bookmarks.by_tg_id(message.chat.id)
             author = muc.get_system_participant()
         else:
             self.log.warning("Referenced message author not understood: %s", message)
