@@ -15,6 +15,7 @@ from slixmpp.exceptions import XMPPError
 
 from . import config, reactions
 from .session import Session
+from .http_server import start_server
 
 REGISTRATION_INSTRUCTIONS = (
     "You need to create a telegram account in an official telegram client.\n\nThen you"
@@ -61,6 +62,9 @@ class Gateway(BaseGateway[Session]):
         field for field in BaseGateway.PREFERENCES if field.var != "sync_presence"
     ]
 
+    async def _start_local_http(self, event):
+        await start_server(self, port=config.MEDIA_SERVER_PORT)
+
     def __init__(self) -> None:
         super().__init__()
         if not config.API_ID:
@@ -87,6 +91,7 @@ class Gateway(BaseGateway[Session]):
         reactions.engine = sa.create_engine(f"sqlite:///{reactions_db_path}")
         if not reactions_db_path.exists():
             reactions.Base.metadata.create_all(reactions.engine)
+        self.xmpp.add_event_handler("session_start", self._start_local_http)
 
     async def validate(
         self, user_jid: JID, registration_form: dict[str, str | None]

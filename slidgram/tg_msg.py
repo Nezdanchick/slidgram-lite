@@ -120,9 +120,6 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
         correction: bool = False,
         archive_only: bool = False,
     ) -> None:
-        if message.sticker is not None and message.sticker.is_animated:
-            await self.__send_sticker(message, carbon, correction, archive_only)
-
         media = _get_media(message)
         if media is None:
             self.log.warning("Could not determine media in %s", message)
@@ -134,55 +131,49 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
                 f"Unsupported media type: {message.media}",
             )
             return
-        if message.caption is None:
-            caption = None
+
+        # Пытаемся получить file_id, который нужен твоему прокси
+        file_id = getattr(media, "file_id", None)
+        if not file_id:
+            self.log.warning("Media has no file_id: %s", media)
+            return
+
+        # Формируем имя файла (если его нет в метаданных — генерируем на лету)
+        file_name = getattr(media, "file_name", None)
+        if not file_name:
+            # Для фото, стикеров и голосовых сообщений генерируем безопасное имя
+            ext = "jpg" if isinstance(media, Photo) else "webp" if isinstance(media, Sticker) else "ogg" if isinstance(media, Voice) else "mp4"
+            file_name = f"{message.media.name.lower()}_{media.file_unique_id}.{ext}"
+
+        # Собираем ссылку через твой прокси
+        srv_host = config.MEDIA_SERVER_HOST
+        srv_port = config.MEDIA_SERVER_PORT
+        
+        local_target_url = f"http://{srv_host}:{srv_port}/{file_id}"
+
+        # Префикс прокси WebOne (если задан)
+        base_proxy = config.PROXY_MEDIA_URL.strip()
+        if base_proxy:
+            if not base_proxy.endswith("/"):
+                base_proxy += "/"
+            link = f"{base_proxy}{local_target_url}"
         else:
+            link = local_target_url
+
+        # Добавляем описание (caption), если оно есть, и сохраняем форматирование
+        if message.caption:
             caption = self._to_message_styling_caption(message)
-        if media.file_size > config.ATTACHMENT_MAX_SIZE:
-            text = f"{media} (larger than {config.ATTACHMENT_MAX_SIZE})"
-            if message.text:
-                text += f"\n{self._to_message_styling(message)}"
-            if caption:
-                text += f"\n{caption}"
-            await self.__send_text(
-                message,
-                carbon,
-                correction,
-                archive_only,
-                text,
-            )
-            return
-        self.log.debug("Downloading %s", media.file_id)
-        downloader = self.tg.get_downloader(media.file_id)
-        if downloader is None:
-            self.log.warning("Could not download %s", media)
-            return
-        await self.send_file(
-            LegacyAttachment(
-                aio_stream=downloader,
-                name=getattr(media, "file_name", None),
-                legacy_file_id=media.file_unique_id,
-                caption=caption,
-                content_type=(
-                    "image/jpeg"
-                    if isinstance(
-                        media, Photo
-                    )  # no mime_type attribute for Photos, but always JPEG
-                    else getattr(media, "mime_type", None)
-                ),
-                disposition="inline"
-                if isinstance(media, (Sticker, Animation, Thumbnail))
-                else None,
-                is_sticker=message.sticker is not None,
-            ),
-            str(message.id),
-            reply_to=await self._get_reply_to(message.reply_to_message),
-            carbon=carbon,
-            correction=correction,
-            when=message.date,
-            archive_only=archive_only,
-            link_previews=_get_link_previews(message),
-            thread=await self.__get_thread(message),
+            formatted_text = f"{file_name}: {link}\n---\n{caption}"
+        else:
+            formatted_text = f"{file_name}: {link}"
+
+        # Отправляем как обычный текст
+        await self.__send_text(
+            message,
+            carbon,
+            correction,
+            archive_only,
+            text=formatted_text,
         )
 
     async def __send_sticker(

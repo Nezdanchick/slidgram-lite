@@ -1,3 +1,9 @@
+import os
+
+PROXY_MEDIA_URL = os.environ.get("SLIDGRAM_PROXY_MEDIA_URL", "")
+MEDIA_SERVER_HOST = os.environ.get("SLIDGRAM_MEDIA_SERVER_HOST", "localhost")
+MEDIA_SERVER_PORT = int(os.environ.get("SLIDGRAM_MEDIA_SERVER_PORT", "5050"))
+
 _api_txt = "\nIf you dont set it, users will have to enter their own on registration."
 
 API_ID: int | None = None
