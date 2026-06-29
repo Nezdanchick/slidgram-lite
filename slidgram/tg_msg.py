@@ -162,24 +162,26 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
             ext = "jpg" if isinstance(media, Photo) else "webp" if isinstance(media, Sticker) else "ogg" if isinstance(media, Voice) else "mp4"
             file_name = f"{message.media.name.lower()}_{media.file_unique_id}.{ext}"
 
+        file_size = getattr(media, "file_size", 0)
         srv_host = config.MEDIA_SERVER_HOST
         srv_port = config.MEDIA_SERVER_PORT
         import base64
         import zlib
+        import urllib.parse
         
-        # Combine file_id, token, and file_name into one payload
-        payload = f"{file_id}|{config.MEDIA_TOKEN}|{file_name}".encode('utf-8')
-        b64_payload = base64.urlsafe_b64encode(zlib.compress(payload)).decode('utf-8')
+        payload = f"{file_id}|{config.MEDIA_TOKEN}|{file_size}".encode('utf-8')
+        b64_payload = base64.urlsafe_b64encode(zlib.compress(payload)).decode('utf-8').rstrip('=')
         
+        safe_name = urllib.parse.quote(file_name)
         public_url = config.PUBLIC_MEDIA_URL.strip()
         if public_url:
             if not public_url.endswith("/"):
                 public_url += "/"
-            local_target_url = f"{public_url}get/{b64_payload}"
-            oob_url = f"{public_url}raw/{b64_payload}?name={file_name}"
+            local_target_url = f"{public_url}get/{b64_payload}/{safe_name}"
+            oob_url = f"{public_url}raw/{b64_payload}/{safe_name}"
         else:
-            local_target_url = f"http://{srv_host}:{srv_port}/get/{b64_payload}"
-            oob_url = f"http://{srv_host}:{srv_port}/raw/{b64_payload}?name={file_name}"
+            local_target_url = f"http://{srv_host}:{srv_port}/get/{b64_payload}/{safe_name}"
+            oob_url = f"http://{srv_host}:{srv_port}/raw/{b64_payload}/{safe_name}"
 
         link = local_target_url
 
