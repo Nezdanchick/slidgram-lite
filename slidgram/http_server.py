@@ -74,9 +74,24 @@ async def handle_b64_viewer(request):
     except Exception:
         html_template = "<html><body><a href='{file_url}'>Download {filename}</a></body></html>"
         
+    from . import config
+    base_proxy = config.PROXY_MEDIA_URL.strip() if config.PROXY_MEDIA_URL else ""
+    if base_proxy and not base_proxy.endswith("/"):
+        base_proxy += "/"
+        
+    raw_file_url = f"/raw/{b64_payload}"
+    
+    if base_proxy:
+        host = request.headers.get('Host', f"{config.MEDIA_SERVER_HOST}:{config.MEDIA_SERVER_PORT}")
+        scheme = request.headers.get('X-Forwarded-Proto', 'http')
+        absolute_file_url = f"{scheme}://{host}{raw_file_url}"
+        file_url = f"{base_proxy}{absolute_file_url}"
+    else:
+        file_url = raw_file_url
+        
     html = html_template.format(
         filename=filename,
-        file_url=f"/b64file/{b64_payload}"
+        file_url=file_url
     )
     return web.Response(text=html, content_type='text/html')
 
@@ -84,8 +99,8 @@ async def start_server(gateway_instance, port=5050):
     global _gateway
     _gateway = gateway_instance
     app = web.Application()
-    app.router.add_get('/b64/{payload}', handle_b64_viewer)
-    app.router.add_get('/b64file/{payload}', handle_b64_media)
+    app.router.add_get('/get/{payload}', handle_b64_viewer)
+    app.router.add_get('/raw/{payload}', handle_b64_media)
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, '0.0.0.0', port)

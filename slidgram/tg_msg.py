@@ -160,17 +160,11 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
         if public_url:
             if not public_url.endswith("/"):
                 public_url += "/"
-            local_target_url = f"{public_url}b64/{b64_payload}"
+            local_target_url = f"{public_url}get/{b64_payload}"
         else:
-            local_target_url = f"http://{srv_host}:{srv_port}/b64/{b64_payload}"
+            local_target_url = f"http://{srv_host}:{srv_port}/get/{b64_payload}"
 
-        base_proxy = config.PROXY_MEDIA_URL.strip()
-        if base_proxy:
-            if not base_proxy.endswith("/"):
-                base_proxy += "/"
-            link = f"{base_proxy}{local_target_url}"
-        else:
-            link = local_target_url
+        link = local_target_url
 
         if message.caption:
             caption = self._to_message_styling_caption(message)
