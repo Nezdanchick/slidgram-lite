@@ -118,9 +118,28 @@ async def handle_b64_viewer(request):
         file_url_proxy = raw_file_url
         file_url_orig = raw_file_url
         
+    is_video = filename.lower().endswith(('.mp4', '.ogg', '.avi', '.webm', '.mkv', '.mov', '.3gp'))
+    if base_proxy:
+        import urllib.parse
+        encoded_url = urllib.parse.quote(absolute_file_url)
+        if is_video:
+            file_url_proxy_forced = f"{base_proxy}!convert/?url={encoded_url}&dest=flv&type=video/x-flv&util=ffmpeg"
+        else:
+            file_url_proxy_forced = f"{base_proxy}!convert/?url={encoded_url}&dest=jpg&type=image/jpeg&util=convert"
+    else:
+        file_url_proxy_forced = file_url_proxy
+    if is_video:
+        media_html = f'''<video width="320" height="240" controls style="max-width: 100%; background: #000;">
+            <source src="{file_url_orig}" type="video/mp4">
+            <div class="video-placeholder">Видео<br><span style="font-size: 14px; color: #888;">(Нажмите Скачать для просмотра)</span></div>
+        </video>'''
+    else:
+        media_html = f'<img src="{file_url_proxy_forced}" alt="Media" onerror="this.style.display=\'none\';">'
+
     html = html_template.format(
         filename=filename,
-        file_url_proxy=file_url_proxy,
+        media_html=media_html,
+        file_url_proxy=file_url_proxy_forced,
         file_url_orig=file_url_orig,
         formatted_size=formatted_size
     )
