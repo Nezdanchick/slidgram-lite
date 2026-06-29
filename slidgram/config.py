@@ -1,8 +1,11 @@
 import os
 
 PROXY_MEDIA_URL = os.environ.get("SLIDGRAM_PROXY_MEDIA_URL", "")
+PROXY_MEDIA_URL__DOC = "URL of proxy for media files"
 MEDIA_SERVER_HOST = os.environ.get("SLIDGRAM_MEDIA_SERVER_HOST", "localhost")
+MEDIA_SERVER_HOST__DOC = "Host for local media server"
 MEDIA_SERVER_PORT = int(os.environ.get("SLIDGRAM_MEDIA_SERVER_PORT", "5050"))
+MEDIA_SERVER_PORT__DOC = "Port for local media server"
 
 _api_txt = "\nIf you dont set it, users will have to enter their own on registration."
 
