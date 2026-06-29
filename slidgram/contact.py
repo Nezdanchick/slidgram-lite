@@ -17,7 +17,6 @@ from .tg_msg import TelegramMessageSenderMixin
 if TYPE_CHECKING:
     from .session import Session
 
-
 class Roster(LegacyRoster["Contact"]):
     session: "Session"
 
@@ -41,7 +40,6 @@ class Roster(LegacyRoster["Contact"]):
             if user.id == self.session.tg.me.id:
                 continue
             yield await self.by_legacy_id(str(user.id))
-
 
 class Contact(
     RecipientMixin,
@@ -107,6 +105,5 @@ class Contact(
         archive_only: bool = False,
     ) -> None:
         await super().send_tg_msg(message, carbon=carbon, correction=correction)
-
 
 log = logging.getLogger(__name__)

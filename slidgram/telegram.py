@@ -35,17 +35,14 @@ P = ParamSpec("P")
 R = TypeVar("R")
 WrappedMethod = Callable[P, Awaitable[R]]
 
-AVATAR_DOWNLOAD_SLEEP = 15  # seconds between avatar downloads
+AVATAR_DOWNLOAD_SLEEP = 15  
 MAX_FLOOD_ATTEMPTS = 10
-
 
 class InvalidUser:
     pass
 
-
 class InvalidUserException(Exception):
     pass
-
 
 class Client(TelegramClient):
     message_cache: "MessageCache"
@@ -56,21 +53,19 @@ class Client(TelegramClient):
         self._available_reactions: set[str] | None = None
         self.log = logging.getLogger(f"Telegram:{name}")
 
-        self.get_chat = handle_flood(self.get_chat)  # type: ignore
-        self.get_contacts = handle_flood(self.get_contacts)  # type: ignore
-        self.get_users = handle_flood(self.get_users)  # type: ignore
-        self.download_media = handle_flood(self.download_media)  # type: ignore
-        self.get_chat_member = handle_flood(self.get_chat_member)  # type: ignore
+        self.get_chat = handle_flood(self.get_chat)  
+        self.get_contacts = handle_flood(self.get_contacts)  
+        self.get_users = handle_flood(self.get_users)  
+        self.download_media = handle_flood(self.download_media)  
+        self.get_chat_member = handle_flood(self.get_chat_member)  
         self._download_avatar_lock = asyncio.Lock()
         self._get_user_lock = asyncio.Lock()
         self._users_to_get = list[int]()
 
-        self.on_raw_update(group=0)(self._on_raw)  # type:ignore
+        self.on_raw_update(group=0)(self._on_raw)  
         self.on_edited_message(group=1)(self._on_edited_message)
 
         self._reactions = ReactionsStore(name)
-        # We cache raw users because they seem to have a measurably
-        # lower memory footprint than pyrogram's "rich" Users.
         self._user_cache: OrderedDict[int, RawUser | InvalidUser] = LimitedSizeDict(
             1_000
         )
@@ -81,7 +76,6 @@ class Client(TelegramClient):
         ) = None
 
     def is_me(self, user: User | int) -> bool:
-        # we need this because is_self is not always set
         if isinstance(user, User):
             if user.is_self is not None:
                 return user.is_self
@@ -93,7 +87,6 @@ class Client(TelegramClient):
 
     @property
     def download_path(self) -> str:
-        # the trailing slash is needed by pyrogram
         return str(global_config.HOME_DIR.absolute() / "telegram_downloads") + "/"
 
     async def download_avatar(self, file_id: str) -> Path | None:
@@ -111,7 +104,7 @@ class Client(TelegramClient):
 
     async def get_available_reactions(self) -> AvailableReactions:
         rpc = GetAvailableReactions(hash=0)
-        return await self.invoke(rpc)  # type:ignore[no-any-return, no-untyped-call]
+        return await self.invoke(rpc)  
 
     async def available_reactions(self) -> set[str]:
         if self._available_reactions is None:
@@ -191,7 +184,6 @@ class Client(TelegramClient):
                 raise InvalidUserException(f"{user_id} was cached and is invalid")
             if cached_raw is not None:
                 self.log.debug("user was cached! YAY!")
-                # noinspection PyProtectedMember
                 cached_user = User._parse(self, cached_raw)
                 assert cached_user is not None
                 return cached_user
@@ -205,12 +197,12 @@ class Client(TelegramClient):
         assert isinstance(user, User)
         return user
 
-    async def invoke(self, *a, **k):  # noqa  # type:ignore[no-untyped-def]
+    async def invoke(self, *a, **k):  
         r = await super().invoke(*a, **k)
         self.__update_user_cache(r)
         return r
 
-    def __update_user_cache(self, raw_obj) -> None:  # noqa  # type:ignore[no-untyped-def]
+    def __update_user_cache(self, raw_obj) -> None:  
         raw_users: list[RawUser] = getattr(raw_obj, "users", [])
         for raw_user in raw_users:
             if isinstance(raw_user, UserEmpty):
@@ -228,26 +220,25 @@ class Client(TelegramClient):
         if not isinstance(user, InputPeerUser):
             self.log.warning("Tried to make admin but wrong peer type: %s", type(user))
             return False
-        return await self.invoke(  # type:ignore[no-any-return]
+        return await self.invoke(  
             EditChatAdmin(
                 chat_id=chat.chat_id,
-                user_id=user,  # type:ignore
+                user_id=user,  
                 is_admin=is_admin,
             )
         )
 
-
-class LimitedSizeDict(OrderedDict):  # type:ignore[type-arg]
-    def __init__(self, size: int, *args, **kwargs) -> None:  # noqa
+class LimitedSizeDict(OrderedDict):  
+    def __init__(self, size: int, *args, **kwargs) -> None:  
         self._size = size
         super().__init__(*args, **kwargs)
         self._check_size_limit()
 
-    def __setitem__(self, key, value) -> None:  # noqa
+    def __setitem__(self, key, value) -> None:  
         super().__setitem__(key, value)
         self._check_size_limit()
 
-    def update(self, *args, **kwargs) -> None:  # noqa
+    def update(self, *args, **kwargs) -> None:  
         super().update(*args, **kwargs)
         self._check_size_limit()
 
@@ -255,26 +246,20 @@ class LimitedSizeDict(OrderedDict):  # type:ignore[type-arg]
         while len(self) > self._size:
             self.popitem(last=False)
 
-
 class MessageCache(Cache):
-    # we need to subclass the default message cache because _on_tg_deleted_msg
-    # comes with message IDs only, and we need to know which chat they actually
-    # belong too
 
-    def __init__(self, *args, **kwargs) -> None:  # noqa
+    def __init__(self, *args, **kwargs) -> None:  
         super().__init__(*args, **kwargs)
         self._chat_by_message_ids = LimitedSizeDict(10_000)
 
     def __setitem__(self, key: tuple[int, int], value: Message) -> None:
-        # tuple = [chat_id, message_id]
-        super().__setitem__(key, value)  # type:ignore[no-untyped-call]
+        super().__setitem__(key, value)  
         self._chat_by_message_ids[value.id] = value
 
     def get_by_message_id(self, message_id: int) -> Message:
-        return self._chat_by_message_ids.get(message_id)  # type:ignore
+        return self._chat_by_message_ids.get(message_id)  
 
     def remove_chat(self, chat_id: int) -> None:
-        # a bit hacky, but works. maybe perf will be an issue eventually
         new = {
             message_id: message
             for message_id, message in self._chat_by_message_ids.items()
@@ -282,9 +267,7 @@ class MessageCache(Cache):
         }
         self._chat_by_message_ids = LimitedSizeDict(10_000, new)
 
-
 invalid_user = InvalidUser()
-
 
 def handle_flood(func: WrappedMethod[P, R]) -> WrappedMethod[P, R]:
     @functools.wraps(func)
@@ -306,6 +289,5 @@ def handle_flood(func: WrappedMethod[P, R]) -> WrappedMethod[P, R]:
         raise XMPPError("internal-server-error", "Telegram flood")
 
     return wrapped
-
 
 log = logging.getLogger(__name__)

@@ -34,7 +34,6 @@ if TYPE_CHECKING:
     from .contact import Contact
     from .session import Session
 
-
 class Bookmarks(LegacyBookmarks["MUC"]):
     session: "Session"
 
@@ -77,7 +76,6 @@ class Bookmarks(LegacyBookmarks["MUC"]):
                     and dialog.top_message.left_chat_member is not None
                     and dialog.top_message.left_chat_member.is_self
                 ):
-                    # destroyed groups or groups that have been left
                     continue
                 try:
                     muc = await self.by_tg_id(dialog.chat.id)
@@ -87,14 +85,12 @@ class Bookmarks(LegacyBookmarks["MUC"]):
                     auto_join=dialog.chat.type == ChatType.GROUP, pin=dialog.is_pinned
                 )
 
-
 class MUC(ReactionsMixin, RecipientMixin, SetAvatarMixin, LegacyMUC["Participant"]):
     session: "Session"
 
-    def __init__(self, *a, **kw) -> None:  # type:ignore[no-untyped-def]  # noqa
+    def __init__(self, *a, **kw) -> None:  
         super().__init__(*a, **kw)
         self.pinned_message_ids = list[int]()
-        # key = topic.id; value = last broadcast UNIX timestamp
         self.threads_title_broadcasted = dict[int, float]()
 
     @property
@@ -410,15 +406,15 @@ class MUC(ReactionsMixin, RecipientMixin, SetAvatarMixin, LegacyMUC["Participant
 
     def serialize_extra_attributes(self) -> JSONSerializable:
         return {
-            "pinned_messages": self.pinned_message_ids,  # type:ignore[dict-item]
-            "threads_title_broadcasted": self.threads_title_broadcasted,  # type:ignore[dict-item]
+            "pinned_messages": self.pinned_message_ids,  
+            "threads_title_broadcasted": self.threads_title_broadcasted,  
         }
 
     def deserialize_extra_attributes(self, data: JSONSerializable) -> None:
-        self.pinned_message_ids = (data.get("pinned_messages", []),)  # type:ignore[assignment]
+        self.pinned_message_ids = (data.get("pinned_messages", []),)  
         self.threads_title_broadcasted = {
-            int(k): v  # type:ignore[misc]
-            for k, v in data.get("threads_title_broadcasted", {}).items()  # type:ignore[union-attr]
+            int(k): v  
+            for k, v in data.get("threads_title_broadcasted", {}).items()  
         }
 
     async def send_thread_subject(self, topic: ForumTopic) -> None:
@@ -460,7 +456,6 @@ class MUC(ReactionsMixin, RecipientMixin, SetAvatarMixin, LegacyMUC["Participant
             )
         me = await self.get_user_participant()
         me.moderate(legacy_msg_id)
-
 
 class Participant(TelegramMessageSenderMixin, LegacyParticipant["Contact"]):
     muc: MUC
@@ -558,41 +553,39 @@ class Participant(TelegramMessageSenderMixin, LegacyParticipant["Contact"]):
         assert self.contact is not None
         await self.tg.add_chat_members(self.muc.tg_id, self.contact.tg_id)
 
-
 def is_owner_privileges(privileges: ChatPrivileges | None) -> bool:
     return privileges is not None and privileges.can_change_info
-
 
 _NO_PRIVILEGES = ChatPrivileges(
     can_manage_chat=False,
     can_delete_messages=False,
-    can_manage_video_chats=False,  # Groups and supergroups only
+    can_manage_video_chats=False,  
     can_restrict_members=False,
     can_promote_members=False,
     can_change_info=False,
-    can_post_messages=False,  # Channels only
-    can_edit_messages=False,  # Channels only
+    can_post_messages=False,  
+    can_edit_messages=False,  
     can_invite_users=False,
-    can_pin_messages=False,  # Groups and supergroups only
-    can_manage_topics=False,  # supergroups only.
-    can_post_stories=False,  # Channels only
-    can_edit_stories=False,  # Channels only
-    can_delete_stories=False,  # Channels only
+    can_pin_messages=False,  
+    can_manage_topics=False,  
+    can_post_stories=False,  
+    can_edit_stories=False,  
+    can_delete_stories=False,  
 )
 
 _ALL_PRIVILEGES = ChatPrivileges(
     can_manage_chat=True,
     can_delete_messages=True,
-    can_manage_video_chats=True,  # Groups and supergroups only
+    can_manage_video_chats=True,  
     can_restrict_members=True,
     can_promote_members=True,
     can_change_info=True,
-    can_post_messages=True,  # Channels only
-    can_edit_messages=True,  # Channels only
+    can_post_messages=True,  
+    can_edit_messages=True,  
     can_invite_users=True,
-    can_pin_messages=True,  # Groups and supergroups only
-    can_manage_topics=True,  # supergroups only.
-    can_post_stories=True,  # Channels only
-    can_edit_stories=True,  # Channels only
-    can_delete_stories=True,  # Channels only
+    can_pin_messages=True,  
+    can_manage_topics=True,  
+    can_post_stories=True,  
+    can_edit_stories=True,  
+    can_delete_stories=True,  
 )

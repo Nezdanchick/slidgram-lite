@@ -10,7 +10,6 @@ from . import config
 if TYPE_CHECKING:
     from .session import Session
 
-
 class SetAvatarMixin(AvatarMixin):
     session: "Session"
     log: logging.Logger

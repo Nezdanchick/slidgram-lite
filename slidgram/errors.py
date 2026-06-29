@@ -26,18 +26,15 @@ from .telegram import InvalidUserException
 P = ParamSpec("P")
 R = TypeVar("R")
 
-
 class HasInvalidKeyMethodAndLoggerAttribute(Protocol):
     log: logging.Logger
 
     async def on_invalid_key(self) -> Never: ...
 
-
 T = TypeVar("T", bound=HasInvalidKeyMethodAndLoggerAttribute)
 
 WrappedMethod = Callable[Concatenate[T, P], Coroutine[Any, Any, R]]
 WrappedIterator = Callable[Concatenate[T, P], AsyncIterator[R]]
-
 
 _ERROR_MAP: dict[Any, ErrorConditions] = {
     ReactionInvalid: "not-acceptable",
@@ -46,7 +43,6 @@ _ERROR_MAP: dict[Any, ErrorConditions] = {
     Unauthorized: "not-authorized",
     InvalidUserException: "item-not-found",
 }
-
 
 def tg_to_xmpp_errors(func: WrappedMethod[T, P, R]) -> WrappedMethod[T, P, R]:
     @functools.wraps(func)
@@ -60,7 +56,6 @@ def tg_to_xmpp_errors(func: WrappedMethod[T, P, R]) -> WrappedMethod[T, P, R]:
 
     return wrapped
 
-
 def tg_to_xmpp_errors_it(func: WrappedIterator[T, P, R]) -> WrappedIterator[T, P, R]:
     @functools.wraps(func)
     async def wrapped(self: T, /, *a: P.args, **ka: P.kwargs) -> AsyncIterator[R]:
@@ -73,7 +68,6 @@ def tg_to_xmpp_errors_it(func: WrappedIterator[T, P, R]) -> WrappedIterator[T, P
             _raise(e, func)
 
     return wrapped
-
 
 def log_error_on_peer_id_invalid(
     func: WrappedMethod[T, P, R],
@@ -104,7 +98,6 @@ def log_error_on_peer_id_invalid(
 
     return wrapped
 
-
 def ignore_event_on_peer_id_invalid(
     func: WrappedMethod[T, P, R],
 ) -> WrappedMethod[T, P, R | None]:
@@ -127,7 +120,6 @@ def ignore_event_on_peer_id_invalid(
             return None
 
     return wrapped
-
 
 def _raise(e: RPCError | InvalidUserException, func: Callable[[Any], Any]) -> Never:
     condition = _ERROR_MAP.get(type(e), "internal-server-error")

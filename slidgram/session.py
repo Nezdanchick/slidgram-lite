@@ -5,12 +5,12 @@ from typing import TYPE_CHECKING, Never
 import pyrogram.raw.types as pyro_raw_types
 from PIL import Image
 from pyrogram.enums import ChatType, MessageServiceType
-from pyrogram.raw.base import (  # type:ignore[attr-defined]
+from pyrogram.raw.base import (  
     Peer,
     SendMessageAction,
     Update,
 )
-from pyrogram.raw.base.contacts import ImportedContacts  # type:ignore[attr-defined]
+from pyrogram.raw.base.contacts import ImportedContacts  
 from pyrogram.types import (
     Chat,
     ChatMemberUpdated,
@@ -37,12 +37,9 @@ if TYPE_CHECKING:
     from .contact import Contact, Roster
     from .group import MUC, Bookmarks, Participant
 
-
 class Session(BaseSession["Contact"]):
     bookmarks: "Bookmarks"
     contacts: "Roster"
-    
-    # Store active sessions here so http_server can find them
     active_sessions: set["Session"] = set()
 
     def __init__(self, user: GatewayUser) -> None:
@@ -52,14 +49,12 @@ class Session(BaseSession["Contact"]):
     def __init_tg(self) -> None:
         self.tg = TelegramClient(self.user_jid.bare)
 
-        # need to be in a different group than other handlers or else it's not used
-        self.tg.on_raw_update(group=10)(self._on_tg_raw)  # type:ignore[misc]
+        self.tg.on_raw_update(group=10)(self._on_tg_raw)  
         self.tg.on_message(group=20)(self._on_tg_msg)
         self.tg.on_user_status(group=20)(self._on_tg_status)
         self.tg.on_edited_message(group=20)(self._on_tg_edit)
         self.tg.on_chat_member_updated(group=20)(self._on_tg_chat_member)
         self.tg.on_deleted_messages(group=20)(self._on_tg_deleted_msg)
-        # on_reaction is not a standard pyrogram hook, hence the different syntax
         self.tg.on_reaction(self._on_tg_reaction)
 
     @staticmethod
@@ -176,26 +171,19 @@ class Session(BaseSession["Contact"]):
     @log_error_on_peer_id_invalid
     async def _on_tg_msg(self, _tg: TelegramClient, message: Message) -> None:
         if message.chat is not None and self.tg.is_me(message.chat.id):
-            # slidge voluntarily does not support messages to self through the legacy network
             return
         if (
             message.service == MessageServiceType.NEW_CHAT_MEMBERS
             and message.chat
             and message.chat.type == ChatType.SUPERGROUP
         ):
-            # maybe handled in ChatMemberUpdated? This logs a few PeerIdInvalid in supergroups
             return
         sender, carbon = await self.get_sender(message)
-        # TODO: use pyrogram's filters, eg:
-        #  https://pyrofork.mayuri.my.id/main/api/filters.html#pyrogram.filters.left_chat_member
         if (
             sender.is_participant
             and sender.is_user
             and message.service == MessageServiceType.LEFT_CHAT_MEMBERS
         ):
-            # after leaving, we cache deleted message events, and they re-spawn
-            # the MUC in slidge's DB if these message could be resolved.
-            # Removing them from the cache solves the issue.
             self.tg.message_cache.remove_chat(sender.muc.tg_id)
             await self.bookmarks.remove(sender.muc)
             return
@@ -203,16 +191,12 @@ class Session(BaseSession["Contact"]):
 
     @log_error_on_peer_id_invalid
     async def _on_tg_edit(self, _tg: TelegramClient, message: Message) -> None:
-        # Skip edits that carry no text/caption
         if message.text is None and message.caption is None:
             return
 
         sender, carbon = await self.get_sender(message)
 
         if carbon and message.edit_hide:
-            # When a 1:1 contact reacts to one of our messages, this is
-            # triggered with the edit_hide bit on. We don't want to interpret
-            # this as *us* modifying the message from a Telegram app.
             return
 
         await sender.send_tg_msg(message, carbon=carbon, correction=True)
@@ -231,9 +215,6 @@ class Session(BaseSession["Contact"]):
         muc = await self.bookmarks.by_tg_id(update.chat.id)
         part = await muc.get_participant_by_tg_id(update.new_chat_member.user.id)
         part.update_tg_member(update.new_chat_member)
-
-    # this is a handler for a custom event we added to our pyrogram.Client
-    # subclass.
 
     @ignore_event_on_peer_id_invalid
     async def _on_tg_reaction(
@@ -272,8 +253,6 @@ class Session(BaseSession["Contact"]):
             else:
                 sender.retract(str(message.id), carbon=carbon)
 
-    # these are "raw" telegram updates that are not processed at all by
-    # pyrogram
     async def _on_tg_raw(
         self,
         _tg: TelegramClient,
@@ -295,7 +274,6 @@ class Session(BaseSession["Contact"]):
         self, update: pyro_raw_types.UpdateDialogPinned, _users: object, chats: object
     ) -> None:
         if isinstance(update.peer, pyro_raw_types.DialogPeerFolder):
-            # TODO: investigate what that is
             return
 
         muc = await self._get_muc_by_peer(update.peer.peer)
@@ -371,7 +349,6 @@ class Session(BaseSession["Contact"]):
         if isinstance(update.peer, pyro_raw_types.PeerUser) and self.tg.is_me(
             update.peer.user_id
         ):
-            # self-message through telegram are not supported
             return
         actor = await self._get_actor_by_peer(update.peer, user=True)
         actor.displayed(str(update.max_id), carbon=True)
@@ -487,7 +464,6 @@ class Session(BaseSession["Contact"]):
             return await self.bookmarks.by_tg_id(get_channel_id(peer.channel_id))
         return None
 
-
 _COMPOSING_TYPES = (
     pyro_raw_types.SendMessageTypingAction,
     pyro_raw_types.SendMessageChooseStickerAction,
@@ -497,6 +473,5 @@ _COMPOSING_TYPES = (
     pyro_raw_types.SendMessageUploadVideoAction,
     pyro_raw_types.SendMessageUploadRoundAction,
 )
-
 
 log = logging.getLogger(__name__)

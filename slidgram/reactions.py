@@ -8,10 +8,8 @@ from sqlalchemy import orm
 if TYPE_CHECKING:
     from .session import Session
 
-
 class Base(orm.DeclarativeBase):
     pass
-
 
 class Reaction(Base):
     __tablename__ = "reaction"
@@ -26,7 +24,6 @@ class Reaction(Base):
     user_id: orm.Mapped[int] = orm.mapped_column()
     emoji: orm.Mapped[str] = orm.mapped_column()
 
-
 class ReactionsMixin:
     session: "Session"
 
@@ -35,7 +32,6 @@ class ReactionsMixin:
     async def available_emojis(self, _msg_id: str | None = None) -> set[str] | None:
         return await self.session.tg.available_reactions()
 
-
 class ReactionsStore:
     __slots__ = "_name"
 
@@ -43,8 +39,8 @@ class ReactionsStore:
         self._name = name
 
     def get(self, message: Message) -> Sequence[tuple[int, str]]:
-        with orm.Session(engine) as session:  # noqa: F821
-            return session.execute(  # type:ignore
+        with orm.Session(engine) as session:  
+            return session.execute(  
                 sa.select(Reaction.user_id, Reaction.emoji)
                 .where(Reaction.client_name == self._name)
                 .where(Reaction.chat_id == message.chat.id)
@@ -52,7 +48,7 @@ class ReactionsStore:
             ).all()
 
     def set(self, message: Message, reactions: set[tuple[int, str]]) -> None:
-        with orm.Session(engine) as session:  # noqa: F821
+        with orm.Session(engine) as session:  
             session.execute(
                 sa.delete(Reaction)
                 .where(Reaction.client_name == self._name)
@@ -72,6 +68,5 @@ class ReactionsStore:
                 )
 
             session.commit()
-
 
 engine: sa.Engine

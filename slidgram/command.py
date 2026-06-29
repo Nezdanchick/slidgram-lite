@@ -8,7 +8,6 @@ from slixmpp import JID
 if TYPE_CHECKING:
     from .session import Session
 
-
 class JoinPublicChat(Command["Session"]):
     NAME = "🚪 Join a telegram chat"
     HELP = "Join a public channel, private group or supergroup"
@@ -35,7 +34,6 @@ class JoinPublicChat(Command["Session"]):
         if chat_name.startswith("http://"):
             chat_name = "https://" + chat_name[7:]
 
-        # The /s/ part is for web preview of telegram chats and is not accepted by pyrofork's API
         chat_name = chat_name.replace("https://t.me/s/", "https://t.me/")
 
         chat = await session.tg.join_chat(chat_name)

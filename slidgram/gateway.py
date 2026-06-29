@@ -24,7 +24,6 @@ REGISTRATION_INSTRUCTIONS = (
     " want."
 )
 
-
 class Gateway(BaseGateway[Session]):
     REGISTRATION_INSTRUCTIONS = REGISTRATION_INSTRUCTIONS
     REGISTRATION_FIELDS = [
@@ -57,7 +56,6 @@ class Gateway(BaseGateway[Session]):
 
     GROUPS = True
 
-    # telegram presences are handled server-side, remove useless option
     PREFERENCES = [
         field for field in BaseGateway.PREFERENCES if field.var != "sync_presence"
     ]
@@ -123,7 +121,7 @@ class Gateway(BaseGateway[Session]):
 
         _clients[str(user_jid.bare)] = tg_client
 
-        return registration_form | {  # type:ignore[return-value]
+        return registration_form | {  
             "sent_code_hash": sent_code.phone_code_hash,
             "api_id": registration_form.get("api_id") or config.API_ID,
             "api_hash": registration_form.get("api_hash") or config.API_HASH,
@@ -165,11 +163,8 @@ class Gateway(BaseGateway[Session]):
         try:
             await session.tg.log_out()
         except (AuthKeyUnregistered, ConnectionError):
-            # can happen when the session is killed from another tg client
-            await session.tg.storage.delete()  # type:ignore[no-untyped-call]
-
+            await session.tg.storage.delete()  
 
 _clients: dict[str, Client] = {}
-
 
 log = logging.getLogger(__name__)

@@ -19,7 +19,6 @@ _STYLING_SURROUNDS = {
 CODE_BLOCK_TERM = "\n```\n".encode("utf-16-le")
 NEW_LINE_UTF_16 = "\n".encode("utf-16-le")
 
-
 def entities_to_xep_0393(
     text: str,
     entities: list[MessageEntity],
@@ -29,14 +28,7 @@ def entities_to_xep_0393(
     if not entities:
         return text
 
-    # when there is nesting, telegram split entities, but we want to
-    # avoid "_this__*is bold*__nested in italic_"
-    #
-    # # the split similar entities are not guaranteed to be consecutive,
-    # # so we first regroup by ID
-
     try:
-        # then we merge and sort by offset because our converter requires that
         entities = sorted(merge_consecutive_entities(entities), key=lambda x: x.offset)
 
         text_utf16 = text.encode("utf-16-le")
@@ -49,7 +41,6 @@ def entities_to_xep_0393(
 
         return res_utf16.decode("utf-16-le")
     except Exception as e:
-        # let's log it all so we understand why this sometimes happen
         log.exception(
             "Conversion of '%s' with entities '%s' to message styling failed, "
             "falling back to basic text content.",
@@ -58,7 +49,6 @@ def entities_to_xep_0393(
             exc_info=e,
         )
         return text
-
 
 def entities_to_xep_0393_utf_16(
     text: bytes,
@@ -79,8 +69,6 @@ def entities_to_xep_0393_utf_16(
             entity.type == MessageEntityType.CODE
             and NEW_LINE_UTF_16 in text[offset:end]
         ):
-            # telegram allows new lines in preformatted blocks, but
-            # XEP-0393 requires ``` instead of ` for that
             entity.type = MessageEntityType.PRE
 
         before = text[index:offset]
@@ -102,7 +90,6 @@ def entities_to_xep_0393_utf_16(
     result += to_xep_0393(after)
 
     return result
-
 
 def to_xep_0393(
     t: bytes,
@@ -136,7 +123,6 @@ def to_xep_0393(
 
     return t
 
-
 def merge_consecutive_entities(entities: list[MessageEntity]) -> list[MessageEntity]:
     result = []
     i = 0
@@ -157,7 +143,6 @@ def merge_consecutive_entities(entities: list[MessageEntity]) -> list[MessageEnt
 
     return result
 
-
 async def styling_to_entities(
     text: str, mentions: Iterable[Mention] | None = None
 ) -> tuple[str, list[MessageEntity]]:
@@ -169,14 +154,13 @@ async def styling_to_entities(
     entities = []
     for formatting, offset, length, lang in blocks:
         if formatting == "mention":
-            participant = list(mentions)[0]  # FIXME: slidge core
-            # assert isinstance(participant.contact, Contact)
+            participant = list(mentions)[0]  
             entities.append(
                 MessageEntity(
                     type=MessageEntityType.TEXT_MENTION,
                     offset=offset,
                     length=length,
-                    user=await participant.contact.get_tg_user(),  # type:ignore[attr-defined]
+                    user=await participant.contact.get_tg_user(),  
                 )
             )
         elif formatting in ("code", "pre"):
@@ -185,7 +169,7 @@ async def styling_to_entities(
                     type=MessageEntityType.PRE if lang else MessageEntityType.CODE,
                     offset=offset,
                     length=length,
-                    language=lang or None,  # type:ignore[arg-type]
+                    language=lang or None,  
                 )
             )
         else:
@@ -197,7 +181,6 @@ async def styling_to_entities(
                 )
             )
     return text, entities
-
 
 PARSER_TO_ENTITY = {
     "italics": MessageEntityType.ITALIC,

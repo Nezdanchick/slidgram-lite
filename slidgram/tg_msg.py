@@ -31,7 +31,6 @@ if TYPE_CHECKING:
     from .group import MUC, Bookmarks, Participant
     from .session import Session
 
-
 TgMediaTypes = (
     Audio
     | Document
@@ -46,15 +45,14 @@ TgMediaTypes = (
 
 MSG_POLL = "/me sent a poll but this is not supported by slidgram yet"
 
-
 class TelegramMessageSenderMixin(ContentMessageMixin):
     session: "Session"
     log: logging.Logger
     muc: "MUC"
 
-    def __init__(self, *a, **kw) -> None:  # type:ignore[no-untyped-def]  # noqa
+    def __init__(self, *a, **kw) -> None:  
         super().__init__(*a, **kw)
-        self.send_file = handle_flood(self.send_file)  # type:ignore
+        self.send_file = handle_flood(self.send_file)  
 
     async def __get_thread(self, message: Message) -> str | None:
         if message.chat.type == ChatType.SUPERGROUP:
@@ -104,7 +102,6 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
         actual_text = self._to_message_styling(message) if text is None else text
         from .emojis import translate_to_jabber
         actual_text = translate_to_jabber(actual_text)
-        
         if carbon:
             actual_text = f"[You]: {actual_text}"
             carbon = False
@@ -140,28 +137,33 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
             )
             return
 
-        # Пытаемся получить file_id, который нужен твоему прокси
         file_id = getattr(media, "file_id", None)
         if not file_id:
             self.log.warning("Media has no file_id: %s", media)
             return
 
-        # Формируем имя файла (если его нет в метаданных — генерируем на лету)
         file_name = getattr(media, "file_name", None)
         if not file_name:
-            # Для фото, стикеров и голосовых сообщений генерируем безопасное имя
             ext = "jpg" if isinstance(media, Photo) else "webp" if isinstance(media, Sticker) else "ogg" if isinstance(media, Voice) else "mp4"
             file_name = f"{message.media.name.lower()}_{media.file_unique_id}.{ext}"
 
-        # Собираем ссылку через твой прокси
         srv_host = config.MEDIA_SERVER_HOST
         srv_port = config.MEDIA_SERVER_PORT
+        import base64
+        import zlib
         
-        import urllib.parse
-        safe_name = urllib.parse.quote(file_name)
-        local_target_url = f"http://{srv_host}:{srv_port}/{file_id}?name={safe_name}"
+        # Combine file_id, token, and file_name into one payload
+        payload = f"{file_id}|{config.MEDIA_TOKEN}|{file_name}".encode('utf-8')
+        b64_payload = base64.urlsafe_b64encode(zlib.compress(payload)).decode('utf-8')
+        
+        public_url = config.PUBLIC_MEDIA_URL.strip()
+        if public_url:
+            if not public_url.endswith("/"):
+                public_url += "/"
+            local_target_url = f"{public_url}b64/{b64_payload}"
+        else:
+            local_target_url = f"http://{srv_host}:{srv_port}/b64/{b64_payload}"
 
-        # Префикс прокси WebOne (если задан)
         base_proxy = config.PROXY_MEDIA_URL.strip()
         if base_proxy:
             if not base_proxy.endswith("/"):
@@ -170,14 +172,12 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
         else:
             link = local_target_url
 
-        # Добавляем описание (caption), если оно есть, и сохраняем форматирование
         if message.caption:
             caption = self._to_message_styling_caption(message)
             formatted_text = f"{file_name}: {link}\n---\n{caption}"
         else:
             formatted_text = f"{file_name}: {link}"
 
-        # Отправляем как обычный текст
         await self.__send_text(
             message,
             carbon,
@@ -229,7 +229,6 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
                     try:
                         author = await self.contacts.by_tg_id(message.from_user.id)
                     except XMPPError as e:
-                        # deleted/banned user?
                         if e.condition == "item-not-found":
                             author = None
                         else:
@@ -241,7 +240,6 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
                             message.from_user.id
                         )
                     except XMPPError as e:
-                        # deleted/banned user?
                         if e.condition == "item-not-found":
                             author = None
                         else:
@@ -276,7 +274,6 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
             self.bookmarks.user_nick,
         )
 
-
 def _get_link_previews(message: Message) -> list[LinkPreview] | None:
     if message.web_page_preview is None:
         return None
@@ -298,7 +295,6 @@ def _get_link_previews(message: Message) -> list[LinkPreview] | None:
         )
     ]
 
-
 def _get_media(message: Message) -> TgMediaTypes | None:
     if message.sticker is not None:
         if message.sticker.is_animated and message.sticker.thumbs:
@@ -308,9 +304,8 @@ def _get_media(message: Message) -> TgMediaTypes | None:
     for name in _MEDIAS:
         media = getattr(message, name, None)
         if media is not None:
-            return media  # type:ignore[no-any-return]
+            return media  
     return None
-
 
 _MEDIAS = (
     "audio",
@@ -323,6 +318,5 @@ _MEDIAS = (
     "video_note",
     "new_chat_photo",
 )
-
 
 _sticker_download_lock = asyncio.Lock()

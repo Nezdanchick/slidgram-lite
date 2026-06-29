@@ -1,4 +1,7 @@
 import os
+import secrets
+
+MEDIA_TOKEN = os.environ.get("SLIDGRAM_MEDIA_TOKEN", "")
 
 PROXY_MEDIA_URL = os.environ.get("SLIDGRAM_PROXY_MEDIA_URL", "")
 PROXY_MEDIA_URL__DOC = "URL of proxy for media files"

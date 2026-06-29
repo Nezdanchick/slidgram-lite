@@ -16,7 +16,6 @@ from .session import Session
 from .telegram import Client
 from .text_entities import styling_to_entities
 
-
 class RecipientMixin:
     session: Session
     legacy_id: str
@@ -36,13 +35,41 @@ class RecipientMixin:
     @tg_to_xmpp_errors
     async def on_message(self, message: XMPPMessage) -> str | None:
         if message.attachments:
-            # TODO: handle several attachments (when slidge actually supports it)
-            # for attachment in message.attachments:
             return await self._on_files(message)
 
         if message.body:
             from .emojis import translate_to_unicode
-            translated_body = translate_to_unicode(message.body)
+            translated_body = translate_to_unicode(message.body).strip()
+            if " " not in translated_body and translated_body.startswith(("http://", "https://")):
+                ext = translated_body.split('?')[0].split('.')[-1].lower()
+                if ext in ('jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'ogg', 'mp3', 'wav', 'pdf', 'zip'):
+                    import aiohttp
+                    try:
+                        async with aiohttp.ClientSession() as http_session:
+                            async with http_session.get(translated_body) as resp:
+                                if resp.status == 200:
+                                    content_type = resp.headers.get("Content-Type", "application/octet-stream")
+                                    file_name = unquote(translated_body.split('?')[0].split('/')[-1])
+                                    with NamedSpooledTemporaryFile(max_size=50 * 1024 * 1024) as fp:
+                                        async for chunk in resp.content.iter_chunked(8192):
+                                            fp.write(chunk)
+                                        fp.seek(0)
+                                        media = content_type.split("/")[0] if "/" in content_type else "document"
+                                        args = self.tg_id, cast(BinaryIO, fp)
+                                        fp.pseudo_name = file_name
+                                        reply_to = None if message.reply is None else int(message.reply.msg_id)
+                                        if media == "audio":
+                                            tg_msg = await self.tg.send_audio(*args, file_name=file_name, reply_to_message_id=reply_to)
+                                        elif media == "video":
+                                            tg_msg = await self.tg.send_video(*args, file_name=file_name, reply_to_message_id=reply_to)
+                                        elif media == "image":
+                                            tg_msg = await self.tg.send_photo(*args, reply_to_message_id=reply_to)
+                                        else:
+                                            tg_msg = await self.tg.send_document(*args, file_name=file_name, reply_to_message_id=reply_to)
+                                        return str(tg_msg.id)
+                    except Exception as e:
+                        self.log.warning("Failed to auto-upload URL %s: %s", translated_body, e)
+
             text, entities = await styling_to_entities(translated_body, message.mentions)
 
         if message.replace is not None:
@@ -59,7 +86,7 @@ class RecipientMixin:
             text,
             reply_to_message_id=None
             if message.reply is None
-            else int(message.reply.msg_id),  # type:ignore
+            else int(message.reply.msg_id),  
             entities=entities,
         )
         return str(tg_msg.id)
@@ -88,25 +115,25 @@ class RecipientMixin:
             if media == "audio":
                 message = await self.tg.send_audio(
                     *args,
-                    file_name=file_name,  # pyrofork includes the full path without that
-                    reply_to_message_id=reply_to_msg_id,  # type:ignore
+                    file_name=file_name,  
+                    reply_to_message_id=reply_to_msg_id,  
                 )
             elif media == "video":
                 message = await self.tg.send_video(
                     *args,
                     file_name=file_name,
-                    reply_to_message_id=reply_to_msg_id,  # type:ignore
+                    reply_to_message_id=reply_to_msg_id,  
                 )
             elif media == "image":
                 message = await self.tg.send_photo(
                     *args,
-                    reply_to_message_id=reply_to_msg_id,  # type:ignore
+                    reply_to_message_id=reply_to_msg_id,  
                 )
             else:
                 message = await self.tg.send_document(
                     *args,
                     file_name=file_name,
-                    reply_to_message_id=reply_to_msg_id,  # type:ignore
+                    reply_to_message_id=reply_to_msg_id,  
                 )
         if message is None:
             raise XMPPError(
@@ -117,22 +144,14 @@ class RecipientMixin:
     @tg_to_xmpp_errors
     async def on_sticker(self, sticker: Sticker) -> str:
         if sticker.content_type and sticker.content_type != "application/octet-stream":
-            # telegram stickers must be webp
             if sticker.content_type.endswith("mp4"):
-                # video stickers in mp4 format are called "animation" in the
-                # telegram API
                 msg = await self.tg.send_animation(self.tg_id, str(sticker.path))
             elif sticker.content_type.startswith("video"):
-                # video stickers in other formats are not a thing, so just send
-                # as video
                 msg = await self.tg.send_video(self.tg_id, str(sticker.path))
             elif not sticker.content_type.startswith("image"):
-                # fallback to just sending the file as a document
                 msg = await self.tg.send_document(self.tg_id, str(sticker.path))
             assert msg is not None
             return str(msg.id)
-        # at this point we assume we have an image, which we might convert to
-        # webp if needed
         reply_to_msg_id = None if sticker.reply is None else int(sticker.reply.msg_id)
         stickers = self.session.user.legacy_module_data.get("stickers", {})
         assert isinstance(stickers, dict)
@@ -147,7 +166,7 @@ class RecipientMixin:
             message = await self.tg.send_sticker(
                 self.tg_id,
                 file_id,
-                reply_to_message_id=reply_to_msg_id,  # type:ignore
+                reply_to_message_id=reply_to_msg_id,  
             )
         except FileReferenceExpired:
             self.log.warning("Sticker has expired, sending it again")
@@ -168,19 +187,19 @@ class RecipientMixin:
                 message = await self.tg.send_sticker(
                     self.tg_id,
                     fp,
-                    reply_to_message_id=reply_to_msg_id,  # type:ignore
+                    reply_to_message_id=reply_to_msg_id,  
                 )
         else:
             message = await self.tg.send_sticker(
                 self.tg_id,
                 str(sticker.path),
-                reply_to_message_id=reply_to_msg_id,  # type:ignore
+                reply_to_message_id=reply_to_msg_id,  
             )
         assert message is not None
         if message.sticker is None:
             self.log.warning("%s was not sent as a sticker.", sticker.path)
             return str(message.id)
-        stickers[sticker.hashes["sha_512"]] = message.sticker.file_id  # type:ignore
+        stickers[sticker.hashes["sha_512"]] = message.sticker.file_id  
         self.session.legacy_module_data_update({"stickers": stickers})
         return str(message.id)
 
@@ -205,16 +224,14 @@ class RecipientMixin:
         await self.tg.send_reaction(
             self.tg_id,
             int(legacy_msg_id),
-            emoji=emojis,  # type:ignore[arg-type]
+            emoji=emojis,  
         )
 
     @tg_to_xmpp_errors
     async def on_retract(self, legacy_msg_id: str, thread: str | None = None) -> None:
         await self.tg.delete_messages(self.tg_id, [int(legacy_msg_id)], revoke=True)
 
-
 class NamedSpooledTemporaryFile(tempfile.SpooledTemporaryFile[bytes]):
-    # we need to guarantee the .name attribute for pyrogram to be happy
     pseudo_name = "file"
 
     @property
