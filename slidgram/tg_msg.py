@@ -101,8 +101,16 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
         archive_only: bool = False,
         text: str | None = None,
     ) -> None:
+        actual_text = self._to_message_styling(message) if text is None else text
+        from .emojis import translate_to_jabber
+        actual_text = translate_to_jabber(actual_text)
+        
+        if carbon:
+            actual_text = f"[You]: {actual_text}"
+            carbon = False
+
         self.send_text(
-            self._to_message_styling(message) if text is None else text,
+            actual_text,
             str(message.id),
             reply_to=await self._get_reply_to(message.reply_to_message),
             carbon=carbon,

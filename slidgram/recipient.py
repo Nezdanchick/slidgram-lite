@@ -41,7 +41,9 @@ class RecipientMixin:
             return await self._on_files(message)
 
         if message.body:
-            text, entities = await styling_to_entities(message.body, message.mentions)
+            from .emojis import translate_to_unicode
+            translated_body = translate_to_unicode(message.body)
+            text, entities = await styling_to_entities(translated_body, message.mentions)
 
         if message.replace is not None:
             await self.tg.edit_message_text(
