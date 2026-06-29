@@ -41,6 +41,9 @@ if TYPE_CHECKING:
 class Session(BaseSession["Contact"]):
     bookmarks: "Bookmarks"
     contacts: "Roster"
+    
+    # Store active sessions here so http_server can find them
+    active_sessions: set["Session"] = set()
 
     def __init__(self, user: GatewayUser) -> None:
         super().__init__(user)
@@ -74,6 +77,7 @@ class Session(BaseSession["Contact"]):
 
     @tg_to_xmpp_errors
     async def login(self) -> str:
+        Session.active_sessions.add(self)
         await self.tg.start()
         me = self.tg.me
         assert me is not None
@@ -84,6 +88,7 @@ class Session(BaseSession["Contact"]):
 
     @tg_to_xmpp_errors
     async def logout(self) -> None:
+        Session.active_sessions.discard(self)
         await self.tg.stop()
 
     @tg_to_xmpp_errors

@@ -9,11 +9,13 @@ _gateway = None
 async def handle_media(request):
     file_id = request.match_info.get('file_id')
     
-    if not _gateway or not _gateway.sessions:
+    from .session import Session
+    
+    if not Session.active_sessions:
         return web.Response(status=404, text="No active telegram sessions")
 
     # Берем первую активную сессию (XMPP-пользователя), чтобы скачать файл
-    session = list(_gateway.sessions.values())[0]
+    session = list(Session.active_sessions)[0]
     tg_client = session.tg
 
     try:
