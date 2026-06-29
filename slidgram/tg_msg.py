@@ -54,6 +54,19 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
         super().__init__(*a, **kw)
         self.send_file = handle_flood(self.send_file)  
 
+    def _send(self, msg, **kwargs):
+        oob_url = kwargs.pop('oob_url', None)
+        if oob_url:
+            try:
+                msg['oob']['url'] = oob_url
+            except Exception:
+                import xml.etree.ElementTree as ET
+                x = ET.Element('{jabber:x:oob}x')
+                url_elem = ET.SubElement(x, 'url')
+                url_elem.text = oob_url
+                msg.append(x)
+        return super()._send(msg, **kwargs)
+
     async def __get_thread(self, message: Message) -> str | None:
         if message.chat.type == ChatType.SUPERGROUP:
             return str(message.message_thread_id)
@@ -98,6 +111,7 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
         correction: bool = False,
         archive_only: bool = False,
         text: str | None = None,
+        oob_url: str | None = None,
     ) -> None:
         actual_text = self._to_message_styling(message) if text is None else text
         from .emojis import translate_to_jabber
@@ -116,6 +130,7 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
             archive_only=archive_only,
             link_previews=_get_link_previews(message),
             thread=await self.__get_thread(message),
+            oob_url=oob_url,
         )
 
     async def _send_media(
@@ -161,8 +176,10 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
             if not public_url.endswith("/"):
                 public_url += "/"
             local_target_url = f"{public_url}get/{b64_payload}"
+            oob_url = f"{public_url}raw/{b64_payload}?name={file_name}"
         else:
             local_target_url = f"http://{srv_host}:{srv_port}/get/{b64_payload}"
+            oob_url = f"http://{srv_host}:{srv_port}/raw/{b64_payload}?name={file_name}"
 
         link = local_target_url
 
@@ -178,6 +195,7 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
             correction,
             archive_only,
             text=formatted_text,
+            oob_url=oob_url,
         )
 
     async def __send_sticker(
