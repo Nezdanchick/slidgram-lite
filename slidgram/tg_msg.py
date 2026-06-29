@@ -157,7 +157,9 @@ class TelegramMessageSenderMixin(ContentMessageMixin):
         srv_host = config.MEDIA_SERVER_HOST
         srv_port = config.MEDIA_SERVER_PORT
         
-        local_target_url = f"http://{srv_host}:{srv_port}/{file_id}"
+        import urllib.parse
+        safe_name = urllib.parse.quote(file_name)
+        local_target_url = f"http://{srv_host}:{srv_port}/{file_id}?name={safe_name}"
 
         # Префикс прокси WebOne (если задан)
         base_proxy = config.PROXY_MEDIA_URL.strip()
